@@ -1,0 +1,43 @@
+tax-rules:
+  - country: INDIA
+    equity:
+      short-term:
+        holding-period-days: 365
+        tax-rate: 0.15  # 15%
+      long-term:
+        holding-period-days: 366
+        tax-rate: 0.10  # 10%
+        exemption-limit: 100000  # ₹1 lakh
+    
+    debt:
+      short-term:
+        holding-period-days: 1095  # 3 years
+        tax-rate: slab-rate  # As per income tax slab
+      long-term:
+        holding-period-days: 1096
+        tax-rate: 0.20  # 20% with indexation
+    
+    real-estate:
+      short-term:
+        holding-period-days: 730  # 2 years
+        tax-rate: slab-rate
+      long-term:
+        holding-period-days: 731
+        tax-rate: 0.20
+  
+  - country: USA
+    equity:
+      short-term:
+        holding-period-days: 365
+        tax-rate: slab-rate  # As per income tax bracket
+      long-term:
+        holding-period-days: 366
+        tax-rate: 0.15  # 0%, 15%, or 20% based on income
+    
+    real-estate:
+      short-term:
+        holding-period-days: 365
+        tax-rate: slab-rate
+      long-term:
+        holding-period-days: 366
+        tax-rate: 0.15

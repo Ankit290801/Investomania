@@ -1,0 +1,25 @@
+apis:
+  yahoo-finance:
+    enabled: true
+    base-url: https://query1.finance.yahoo.com/v8/finance
+    timeout-seconds: 10
+    retry-attempts: 3
+    rate-limit-per-minute: 100
+  
+  google-finance:
+    enabled: true
+    fallback: true
+    base-url: https://www.google.com/finance
+    timeout-seconds: 10
+  
+  exchange-rate:
+    provider: exchangerate-api
+    base-url: https://api.exchangerate-api.com/v4
+    api-key: ${EXCHANGE_RATE_API_KEY:}
+    update-frequency-hours: 24
+    fallback-enabled: true
+  
+  alpha-vantage:
+    enabled: false
+    api-key: ${ALPHA_VANTAGE_API_KEY:}
+    base-url: https://www.alphavantage.co/query
