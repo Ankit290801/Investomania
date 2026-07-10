@@ -1,0 +1,55 @@
+business-rules:
+  investments:
+    equity:
+      min-quantity: 1
+      max-quantity: 1000000
+      markets:
+        - NSE
+        - BSE
+        - NYSE
+        - NASDAQ
+    
+    fixed-deposit:
+      min-amount: 1000
+      max-tenure-months: 120
+      min-interest-rate: 0.01
+      max-interest-rate: 0.15
+    
+    recurring-deposit:
+      min-monthly-contribution: 100
+      max-tenure-months: 120
+  
+  expenses:
+    categories:
+      - HOUSING
+      - FOOD
+      - TRANSPORT
+      - HEALTHCARE
+      - ENTERTAINMENT
+      - EDUCATION
+      - UTILITIES
+      - INSURANCE
+      - OTHER
+    
+    mapping:
+      min-percentage: 0.01
+      max-percentage: 100
+      total-must-equal: 100
+  
+  analytics:
+    dashboard:
+      default-date-range-days: 365
+      max-date-range-days: 3650  # 10 years
+    
+    segments:
+      equity:
+        - EQUITY
+        - PRIVATE_EQUITY
+      safe-assets:
+        - FD
+        - RD
+        - BONDS
+        - PPF
+      illiquid-assets:
+        - REAL_ESTATE
+        - NPS
