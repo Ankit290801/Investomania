@@ -35,6 +35,75 @@ business-rules:
       min-percentage: 0.01
       max-percentage: 100
       total-must-equal: 100
+
+  # Excel expense import (backlog feature F2). Read by ExpenseImportRules —
+  # the single config accessor for this file.
+  expense-import:
+    # Maximum accepted rows per uploaded sheet.
+    max-rows: 5000
+    # Currency applied when a row omits one.
+    default-currency: INR
+    # Category applied when no keyword matches the description. Must be one
+    # of the categories listed above.
+    default-category: OTHER
+    # Category inference: first keyword found (case-insensitive substring of
+    # the description) wins, in this order.
+    category-keywords:
+      HOUSING:
+        - rent
+        - mortgage
+        - maintenance
+        - society
+      FOOD:
+        - grocery
+        - groceries
+        - restaurant
+        - supermarket
+        - swiggy
+        - zomato
+        - dominos
+      TRANSPORT:
+        - fuel
+        - petrol
+        - diesel
+        - uber
+        - ola
+        - metro
+        - parking
+        - toll
+      HEALTHCARE:
+        - pharmacy
+        - hospital
+        - clinic
+        - doctor
+        - medicine
+        - apollo
+      ENTERTAINMENT:
+        - netflix
+        - cinema
+        - movie
+        - concert
+        - spotify
+      EDUCATION:
+        - tuition
+        - school
+        - college
+        - course
+        - udemy
+        - books
+      UTILITIES:
+        - electricity
+        - water bill
+        - gas
+        - broadband
+        - internet
+        - mobile recharge
+        - airtel
+        - jio
+      INSURANCE:
+        - insurance
+        - premium
+        - policy
   
   analytics:
     dashboard:
@@ -44,11 +113,10 @@ business-rules:
     segments:
       equity:
         - EQUITY
-        - PRIVATE_EQUITY
       safe-assets:
         - FD
         - RD
-        - BONDS
+        - BOND
         - PPF
       illiquid-assets:
         - REAL_ESTATE

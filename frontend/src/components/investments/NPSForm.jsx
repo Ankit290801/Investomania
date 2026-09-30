@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { requiredDateString, todayInputValue } from '../../utils/dateInput';
 import {
   Box,
   TextField,
@@ -15,12 +16,12 @@ const schema = yup.object().shape({
   pranNumber: yup.string().required('PRAN number is required'),
   contributionAmount: yup.number().positive('Amount must be positive').required('Contribution amount is required'),
   contributionFrequency: yup.string().required('Frequency is required'),
-  contributionDate: yup.date().required('Contribution date is required'),
+  contributionDate: requiredDateString('Contribution date'),
   currency: yup.string().required('Currency is required'),
   notes: yup.string()
 });
 
-const NPSForm = ({ onSubmit, onCancel }) => {
+const NPSForm = ({ onSubmit, onCancel, initialData }) => {
   const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -28,9 +29,10 @@ const NPSForm = ({ onSubmit, onCancel }) => {
       pranNumber: '',
       contributionAmount: '',
       contributionFrequency: 'MONTHLY',
-      contributionDate: new Date().toISOString().split('T')[0],
+      contributionDate: todayInputValue(),
       currency: 'INR',
-      notes: ''
+      notes: '',
+      ...initialData
     }
   });
 

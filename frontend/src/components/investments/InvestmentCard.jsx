@@ -10,6 +10,7 @@ import {
   Divider
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { formatCurrency as formatCurrencyValue } from '../../utils/currencyFormatter';
 
 const InvestmentCard = ({ investment, onView, onEdit, onDelete }) => {
   const getTypeColor = (type) => {
@@ -27,8 +28,8 @@ const InvestmentCard = ({ investment, onView, onEdit, onDelete }) => {
   };
 
   const formatCurrency = (value, currency) => {
-    const symbols = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
-    return `${symbols[currency] || currency} ${value.toLocaleString()}`;
+    if (value === null || value === undefined || Number.isNaN(value)) return '\u2014';
+    return formatCurrencyValue(value, currency);
   };
 
   const formatGrowth = (growth) => {

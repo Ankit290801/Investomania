@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Unified logging configuration (Enhancement E1).
+
+  Single source of truth for appenders and levels:
+    - Console: readable dev pattern (timestamp, level, logger, thread, message)
+    - File:    logs/investment-tracker.log with daily rollover + size cap,
+               30 days / 1 GB total history cap
+
+  Levels are declared once here, scoped by Spring profile. Do not add
+  `logging.level.*` blocks to application*.yml — this file owns them.
+
+  Application code must log through the slf4j API only (@Slf4j / LoggerFactory);
+  direct logback or ch.qos.* usage in application code is not allowed.
+-->
+<configuration>
+
+    <!-- ======================= Shared properties ======================= -->
+    <property name="APP_NAME" value="investment-tracker"/>
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
+    <property name="CONSOLE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%-40.40logger{39}) : %msg%n"/>
+    <property name="FILE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{50} : %msg%n"/>
+
+    <!-- ======================= Console appender ======================= -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ======================= Rolling file appender ======================= -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/investment-tracker.log</file>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- daily rollover, size-capped; history capped below -->
+            <fileNamePattern>${LOG_DIR}/investment-tracker.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- ======================= Baseline levels (all profiles) ======================= -->
+    <!-- Stack traces are appended automatically (default throwable handling);
+         no explicit exception converter needed on Logback 1.2.x. -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+    <!-- Keep framework noise down everywhere; Hibernate DDL exceptions from
+         schema migration failures surface at ERROR via the root logger. -->
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="INFO"/>
+    <logger name="org.apache.tomcat" level="WARN"/>
+    <logger name="org.apache.catalina" level="WARN"/>
+    <logger name="org.apache.pdfbox" level="WARN"/>
+    <logger name="org.apache.poi" level="WARN"/>
+
+    <!-- Application loggers that stay calibrated across profiles -->
+    <logger name="com.investment.tracker.config" level="INFO"/>
+    <!-- Import pipelines (statement / CNOTE / expense import): useful at DEBUG
+         whenever a parse needs troubleshooting. -->
+    <logger name="com.investment.tracker.service.StatementPdfParser" level="INFO"/>
+    <logger name="com.investment.tracker.service.ContractNotePdfParser" level="INFO"/>
+    <logger name="com.investment.tracker.service.ExpenseExcelParser" level="INFO"/>
+
+    <!-- ======================= DEV profile ======================= -->
+    <springProfile name="dev">
+        <logger name="com.investment.tracker" level="INFO"/>
+        <logger name="org.springframework.security" level="DEBUG"/>
+        <!-- Replaces the old application-dev.yml jpa.show-sql/format_sql pair:
+             identical output, but filtered and routed through the shared
+             appenders instead of stdout bypassing logback. -->
+        <logger name="org.hibernate.SQL" level="INFO"/>
+        <logger name="org.hibernate.type.descriptor.sql" level="INFO"/>
+        <logger name="org.springframework.orm.jpa" level="INFO"/>
+    </springProfile>
+
+    <!-- ======================= PROD profile ======================= -->
+    <springProfile name="prod">
+        <logger name="com.investment.tracker" level="INFO"/>
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.springframework.security" level="WARN"/>
+    </springProfile>
+
+</configuration>

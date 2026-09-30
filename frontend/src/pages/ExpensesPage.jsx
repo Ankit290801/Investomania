@@ -10,10 +10,11 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Upload as UploadIcon } from '@mui/icons-material';
 import ExpenseDialog from '../components/expenses/ExpenseDialog';
 import ExpenseList from '../components/expenses/ExpenseList';
 import ExpenseMappingDialog from '../components/expenses/ExpenseMappingDialog';
+import ExpenseImportDialog from '../components/expenses/ExpenseImportDialog';
 import { expenseService } from '../services/expenseService';
 
 const categories = [
@@ -35,6 +36,7 @@ const ExpensesPage = () => {
   const [error, setError] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
 
@@ -140,6 +142,13 @@ const ExpensesPage = () => {
           </FormControl>
           
           <Button
+            variant="outlined"
+            startIcon={<UploadIcon />}
+            onClick={() => setImportDialogOpen(true)}
+          >
+            Import Excel
+          </Button>
+          <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
@@ -173,6 +182,12 @@ const ExpensesPage = () => {
         open={mappingDialogOpen}
         onClose={handleCloseMapping}
         expense={selectedExpense}
+      />
+
+      <ExpenseImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={() => fetchExpenses()}
       />
     </Box>
   );

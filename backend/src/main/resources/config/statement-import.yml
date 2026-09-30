@@ -1,0 +1,50 @@
+# Bank statement PDF import configuration (backlog feature F6).
+#
+# Loaded by StatementImportRules — the single config accessor for this file
+# (llm_agent_operating_guidelines.md Section 2). Statements contain sensitive
+# financial data: they are parsed in memory and the raw file is NEVER persisted.
+#
+# Bank detection: the first bank whose statement-marker regex matches the
+# document text (case-insensitive) wins. Add new banks by appending entries —
+# no code change required (doctrine D1/D4).
+statement-import:
+  # Reject uploads larger than this (protects memory; raw bytes never touch disk).
+  max-file-kb: 5120
+
+  # Maximum transaction rows per statement.
+  max-rows: 2000
+
+  # Currency applied when a transaction row doesn't carry one explicitly.
+  default-currency: INR
+
+  # Minimum statement balance-confidence: if fewer than this fraction of
+  # parsed rows produce a valid (date, description, amount) triple, the
+  # import is rejected as an unrecognised format.
+  min-parse-ratio: 0.1
+
+  # Bank registry. Markers are regexes matched (case-insensitively) against
+  # the full PDF text. Parsers are generic: amount columns may be signed
+  # (+/-) or split into Dr/Cr columns — both are handled.
+  banks:
+    - name: HDFC Bank
+      markers:
+        - "(?i)hdfc\\s+bank"
+    - name: ICICI Bank
+      markers:
+        - "(?i)icici\\s+bank"
+    - name: State Bank of India
+      markers:
+        - "(?i)(state\\s+bank\\s+of\\s+india|\\bSBI\\b)"
+    - name: Axis Bank
+      markers:
+        - "(?i)axis\\s+bank"
+    - name: Kotak Mahindra Bank
+      markers:
+        - "(?i)(kotak\\s+mahindra|kotak\\s+bank)"
+
+  # Transaction-type mapping from statement direction: statement credits
+  # (money in) become TRANSFER_IN transactions on the cash account; debits
+  # (money out) become TRANSFER_OUT. Configured here so a future bank
+  # override per bank stays possible without code changes.
+  credit-transaction-type: TRANSFER_IN
+  debit-transaction-type: TRANSFER_OUT

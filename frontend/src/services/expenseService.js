@@ -60,12 +60,13 @@ export const expenseService = {
     return response.data;
   },
 
-  async getCategoryBreakdown(startDate = null, endDate = null) {
+  async getCategoryBreakdown(startDate = null, endDate = null, currency = 'INR') {
     let url = '/expenses/category-breakdown';
     const params = new URLSearchParams();
     
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    if (currency) params.append('currency', currency);
     
     const queryString = params.toString();
     if (queryString) url += `?${queryString}`;
@@ -74,8 +75,29 @@ export const expenseService = {
     return response.data;
   },
 
-  async getMonthlyTrend(months = 12) {
-    const response = await api.get(`/expenses/monthly-trend?months=${months}`);
+  async getMonthlyTrend(months = 12, currency = 'INR') {
+    const params = new URLSearchParams({ months: String(months) });
+    if (currency) params.append('currency', currency);
+    const response = await api.get(`/expenses/monthly-trend?${params.toString()}`);
+    return response.data;
+  },
+
+  // Excel import (backlog feature F2)
+  async importPreview(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/expenses/import/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
+  async importCommit(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/expenses/import/commit', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
   },
 };

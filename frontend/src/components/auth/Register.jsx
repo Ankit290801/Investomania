@@ -12,6 +12,8 @@ import {
   Link
 } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
+import { BRAND_GRADIENT } from '../../config/theme';
+import AppFooter from '../common/AppFooter';
 
 /**
  * User registration page component.
@@ -79,12 +81,28 @@ const Register = () => {
         sx={{
           minHeight: '100vh',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center'
         }}
       >
         <Card sx={{ width: '100%', maxWidth: 400 }}>
           <CardContent sx={{ p: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '12px',
+                  background: BRAND_GRADIENT,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem' }}>IT</Typography>
+              </Box>
+            </Box>
             <Typography variant="h4" component="h1" gutterBottom align="center">
               Create Account
             </Typography>
@@ -167,6 +185,8 @@ const Register = () => {
             </Box>
           </CardContent>
         </Card>
+        {/* E6: same central footer as the app shell — uniform on auth screens. */}
+        <AppFooter />
       </Box>
     </Container>
   );

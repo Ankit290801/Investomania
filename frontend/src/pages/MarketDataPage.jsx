@@ -51,8 +51,7 @@ const MarketDataPage = () => {
   const [manualPriceForm, setManualPriceForm] = useState({
     symbol: '',
     price: '',
-    currency: 'INR',
-    source: 'MANUAL'
+    currency: 'INR'
   });
 
   const { investments, loading: investmentsLoading } = useInvestments();
@@ -160,8 +159,7 @@ const MarketDataPage = () => {
     setManualPriceForm({
       symbol: investment?.symbol || '',
       price: '',
-      currency: investment?.currency || 'INR',
-      source: 'MANUAL'
+      currency: investment?.currency || 'INR'
     });
     setManualPriceDialog(true);
   };

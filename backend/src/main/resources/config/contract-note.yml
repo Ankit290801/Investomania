@@ -1,0 +1,53 @@
+# Broker contract note (CNOTE) PDF import configuration (Phase 9 / Task 8.3).
+#
+# Loaded by ContractNoteRules — the single config accessor for this file
+# (llm_agent_operating_guidelines.md Section 2). Contract notes are parsed in
+# memory; the raw PDF is never persisted.
+#
+# How a template works: each broker has detection `markers` (regexes matched
+# against the document text) and a `trade-row` regex with named capture groups
+# that must yield, per trade line:
+#   qty     — traded quantity
+#   price   — traded price per unit
+#   side    — B/S or BUY/SELL (case-insensitive first letter decides)
+#   symbol  — the stock ticker
+# The regex is matched line-by-line; anything not matching is ignored.
+# Add a broker by appending an entry — no code change (doctrine D1/D4).
+contract-note:
+  # Reject uploads larger than this.
+  max-file-kb: 2048
+
+  # Maximum trade rows per contract note.
+  max-trades: 500
+
+  # Market assumed for parsed symbols when the template doesn't capture one.
+  default-market: NSE
+
+  # Currency for new cash accounts created during import.
+  default-currency: INR
+
+  # Cash account name template for auto-created accounts.
+  # {broker} is replaced with the detected broker name.
+  auto-cash-account-name: "{broker} Settlement Account"
+
+  brokers:
+    - name: Zerodha
+      markers:
+        - "(?i)zerodha"
+      # Zerodha contract-note trade lines, e.g.:
+      #   1  RELIANCE     EQ   Buy   10   2,850.00   28,500.00
+      #   2  TCS          EQ   Sell   5   4,120.00   20,600.00
+      trade-row: "(?i)^\\s*\\d+\\s+(?<symbol>[A-Z][A-Z0-9&._-]{0,19})\\s+(?:EQ|BE|BZ)\\s+(?<side>Buy|Sell)\\s+(?<qty>\\d+)\\s+(?<price>[\\d,]+\\.?\\d*)\\s+[\\d,]+\\.?\\d*\\s*$"
+
+    - name: Groww
+      markers:
+        - "(?i)groww"
+      # Groww trade lines, e.g.:
+      #   INFY      BUY    25    1,540.50    38,512.50
+      trade-row: "(?i)^\\s*(?<symbol>[A-Z][A-Z0-9&._-]{0,19})\\s+(?<side>BUY|SELL)\\s+(?<qty>\\d+)\\s+(?<price>[\\d,]+\\.?\\d*)\\s+[\\d,]+\\.?\\d*\\s*$"
+
+    - name: Generic
+      markers: []
+      # Fallback template for any broker whose note contains the standard
+      # trade line shape. Only used when no broker marker matches.
+      trade-row: "(?i)^\\s*(?<symbol>[A-Z][A-Z0-9&._-]{0,19})\\s+(?:EQ|BE|BZ\\s+)?\\s*(?<side>BUY|SELL|Buy|Sell)\\s+(?<qty>\\d+)\\s+(?<price>[\\d,]+\\.?\\d*)\\s+[\\d,]+\\.?\\d*\\s*$"

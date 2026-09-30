@@ -9,8 +9,6 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
-    show-sql: false
+    # show-sql removed (E1): logging is owned by logback-spring.xml.
 
-logging:
-  level:
-    com.investment.tracker: INFO
+# E1: no logging.level.* here — logback-spring.xml owns all log levels.

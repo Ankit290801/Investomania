@@ -1,16 +1,22 @@
 import React from 'react';
-import { Card, CardContent, Typography } from '@mui/material';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { useTheme } from '@mui/material/styles';
+import { Card, CardContent, Typography, Box } from '@mui/material';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatCurrency } from '../../utils/currencyFormatter';
+import { chartTooltipStyle, seriesColor } from '../../utils/chartHelpers';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B9D', '#C4C4C4'];
-
+/**
+ * F1: expense-by-category donut with themed chrome and a dense
+ * value/percentage legend (shared style with SegmentBreakdownCard).
+ */
 const ExpenseCategoryChart = ({ categoryBreakdown, currency = 'INR' }) => {
+  const theme = useTheme();
+
   if (!categoryBreakdown || Object.keys(categoryBreakdown).length === 0) {
     return (
       <Card sx={{ height: '100%' }}>
         <CardContent>
-          <Typography color="text.secondary" gutterBottom variant="h6">
+          <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
             Expense by Category
           </Typography>
           <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 8 }}>
@@ -25,36 +31,72 @@ const ExpenseCategoryChart = ({ categoryBreakdown, currency = 'INR' }) => {
     .filter(([_, value]) => value > 0)
     .map(([name, value]) => ({
       name: name.replace('_', ' '),
-      value: parseFloat(value),
+      value: parseFloat(value)
     }))
     .sort((a, b) => b.value - a.value);
+
+  const total = chartData.reduce((acc, d) => acc + d.value, 0);
 
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
-        <Typography color="text.secondary" gutterBottom variant="h6">
+        <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
           Expense by Category
         </Typography>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(value) => formatCurrency(value, currency)} />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box sx={{ width: 170, height: 170, flexShrink: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={48}
+                  outerRadius={78}
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={seriesColor(index)} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value) => formatCurrency(value, currency)}
+                  {...chartTooltipStyle(theme)}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 120, ml: 1 }}>
+            {chartData.map((entry, index) => (
+              <Box
+                key={entry.name}
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.4, minWidth: 0 }}
+              >
+                <Box
+                  sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: seriesColor(index), flexShrink: 0 }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ minWidth: 0 }} noWrap>
+                  {entry.name.toLowerCase()}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ ml: 'auto', fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+                >
+                  {formatCurrency(entry.value, currency)}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontVariantNumeric: 'tabular-nums', width: 38, textAlign: 'right' }}
+                >
+                  {total > 0 ? `${((entry.value / total) * 100).toFixed(0)}%` : ''}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );

@@ -12,6 +12,9 @@ import {
   Link
 } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
+import { BRAND_GRADIENT } from '../../config/theme';
+import { APP_NAME } from '../../config/branding';
+import AppFooter from '../common/AppFooter';
 
 /**
  * Simple login page component with username and password fields.
@@ -55,14 +58,30 @@ const Login = () => {
         sx={{
           minHeight: '100vh',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center'
         }}
       >
         <Card sx={{ width: '100%', maxWidth: 400 }}>
           <CardContent sx={{ p: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '12px',
+                  background: BRAND_GRADIENT,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '1.05rem' }}>IT</Typography>
+              </Box>
+            </Box>
             <Typography variant="h4" component="h1" gutterBottom align="center">
-              Investment Tracker
+              {APP_NAME}
             </Typography>
             <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
               Sign in to manage your portfolio
@@ -109,7 +128,7 @@ const Login = () => {
               </Button>
             </form>
 
-            <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary" display="block">
                 Demo Credentials:
               </Typography>
@@ -131,6 +150,8 @@ const Login = () => {
             </Box>
           </CardContent>
         </Card>
+        {/* E6: same central footer as the app shell — uniform on auth screens. */}
+        <AppFooter />
       </Box>
     </Container>
   );

@@ -1,0 +1,32 @@
+# Investment business rules.
+#
+# Loaded by InvestmentListingRules (the single config accessor for this file;
+# see llm_agent_operating_guidelines.md Section 2 — no other module may read
+# this file directly). The file is bundled and versioned; it must always be a
+# complete, independently functional configuration.
+
+investment-rules:
+  listing:
+    # Investment types whose current value is refreshed from live market data
+    # (Yahoo → Google → cache). Only these types may carry is_listed = true;
+    # the backend forces is_listed = false for every other type (bug INV-3).
+    auto-price-eligible-types: EQUITY, CRYPTO
+
+    # Effective is_listed value for eligible types when the client omits it.
+    listed-by-default: true
+
+  bond-coupons:
+    # Auto-recording of bond coupon payments (backlog feature F3 / Enhancement 2.1).
+    # When enabled, a daily job generates INTEREST transactions for bonds whose
+    # coupon payment date has arrived, and a startup catch-up backfills any
+    # payments missed while the app was down. Bonds without a couponFrequency
+    # are treated as zero-coupon and never auto-generate.
+    enabled: true
+
+    # Daily job schedule (6-arg Spring cron: second minute hour day month weekday).
+    # Runs shortly after midnight so the payment lands on its due date.
+    cron: "0 0 1 * * ?"
+
+    # Month/day (MM-DD) used to derive firstCouponDate when the client doesn't
+    # send one: the first occurrence on/after the bond's purchase date.
+    default-first-coupon-month-day: "01-01"

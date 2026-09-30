@@ -2,13 +2,25 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { requiredDateString, todayInputValue } from '../../utils/dateInput';
 import {
   Box,
   TextField,
   MenuItem,
   Button,
-  Grid
+  Grid,
+  FormControl,
+  FormControlLabel,
+  FormHelperText,
+  Checkbox
 } from '@mui/material';
+
+const COUPON_FREQUENCIES = [
+  { value: 'MONTHLY', label: 'Monthly (12 payments/year)' },
+  { value: 'QUARTERLY', label: 'Quarterly (4 payments/year)' },
+  { value: 'SEMI_ANNUAL', label: 'Semi-Annual (2 payments/year)' },
+  { value: 'ANNUAL', label: 'Annual (1 payment/year)' }
+];
 
 const schema = yup.object().shape({
   name: yup.string().required('Bond name is required'),
@@ -17,15 +29,22 @@ const schema = yup.object().shape({
   faceValue: yup.number().positive('Face value must be positive').required('Face value is required'),
   couponRate: yup.number().min(0).max(100).required('Coupon rate is required'),
   purchasePrice: yup.number().positive('Purchase price must be positive').required('Purchase price is required'),
-  maturityDate: yup.date().required('Maturity date is required'),
-  purchaseDate: yup.date().required('Purchase date is required'),
+  maturityDate: requiredDateString('Maturity date'),
+  purchaseDate: requiredDateString('Purchase date'),
+  couponFrequency: yup.string(),
+  firstCouponDate: yup.string().when('couponFrequency', {
+    is: (v) => !!v,
+    then: requiredDateString('First coupon date'),
+    otherwise: yup.string()
+  }),
+  autoGenerateIncome: yup.boolean(),
   currency: yup.string().required('Currency is required'),
   creditRating: yup.string(),
   notes: yup.string()
 });
 
-const BondForm = ({ onSubmit, onCancel }) => {
-  const { control, handleSubmit, formState: { errors } } = useForm({
+const BondForm = ({ onSubmit, onCancel, initialData }) => {
+  const { control, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       name: '',
@@ -35,12 +54,20 @@ const BondForm = ({ onSubmit, onCancel }) => {
       couponRate: '',
       purchasePrice: '',
       maturityDate: '',
-      purchaseDate: new Date().toISOString().split('T')[0],
+      couponFrequency: '',
+      firstCouponDate: '',
+      autoGenerateIncome: true,
+      purchaseDate: todayInputValue(),
       currency: 'INR',
       creditRating: '',
-      notes: ''
+      notes: '',
+      ...initialData
     }
   });
+
+  // Coupon UI (first payment date + auto-record toggle) only applies when a
+  // payment frequency is selected.
+  const watchCouponFrequency = watch('couponFrequency');
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)}>
@@ -186,6 +213,65 @@ const BondForm = ({ onSubmit, onCancel }) => {
             )}
           />
         </Grid>
+        <Grid item xs={12} sm={6}>
+          <Controller
+            name="couponFrequency"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Coupon Payment Frequency (Optional)"
+                fullWidth
+                error={!!errors.couponFrequency}
+                helperText={errors.couponFrequency?.message || 'Leave empty for zero-coupon bonds — payments are recorded manually'}
+              >
+                <MenuItem value="">None (manual entry)</MenuItem>
+                {COUPON_FREQUENCIES.map((f) => (
+                  <MenuItem key={f.value} value={f.value}>{f.label}</MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+        </Grid>
+        {watchCouponFrequency && (
+          <>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="firstCouponDate"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="First Coupon Payment Date"
+                    type="date"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.firstCouponDate}
+                    helperText={errors.firstCouponDate?.message || 'Future coupon payments follow automatically from this date'}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl error={!!errors.autoGenerateIncome} component="fieldset">
+                <FormControlLabel
+                  control={
+                    <Controller
+                      name="autoGenerateIncome"
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox checked={field.value === true} onChange={(e) => field.onChange(e.target.checked)} />
+                      )}
+                    />
+                  }
+                  label="Auto-record coupon payments (recommended)"
+                />
+                <FormHelperText>Generates INTEREST transactions automatically on each payment date</FormHelperText>
+              </FormControl>
+            </Grid>
+          </>
+        )}
         <Grid item xs={12} sm={6}>
           <Controller
             name="maturityDate"

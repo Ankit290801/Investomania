@@ -17,6 +17,9 @@ app:
     api-config-file: classpath:config/api-config.yml
     currency-config-file: classpath:config/currency-config.yml
     business-rules-file: classpath:config/business-rules.yml
+    investment-rules-file: classpath:config/investment-rules.yml
+    statement-import-file: classpath:config/statement-import.yml
+    contract-note-file: classpath:config/contract-note.yml
 
 market-data:
   scheduler:

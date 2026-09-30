@@ -2,12 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/favicon-32.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- E9 PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0F766E" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Investments" />
     <title>Investment Tracker</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // E9 — capture beforeinstallprompt as early as possible: Chromium
+      // fires it during initial load, often before React has mounted
+      // PwaContext's listener. Stash it globally; PwaContext adopts it on      // mount (and prefers a live event if one arrives later).
+      window.__stashedInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__stashedInstallPrompt = e;
+      });
+    </script>
   </body>
 </html>

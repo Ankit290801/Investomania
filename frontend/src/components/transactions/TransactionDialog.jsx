@@ -35,10 +35,21 @@ const TransactionDialog = ({ open, onClose, investmentId, investmentType, invest
       const investment = investments?.find(inv => inv.id === parseInt(targetInvestmentId));
       const currency = investment?.currency || 'USD';
 
+      // INV-4: send a local 'YYYY-MM-DD' string — a Date object would serialize
+      // as UTC and land one day early in the database.
+      const rawDate = typeof data.date === 'string' ? data.date : String(data.date);
+      const dateMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!dateMatch) {
+        setError('Please provide a valid date');
+        setLoading(false);
+        return;
+      }
+      const transactionDate = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+
       // Transform data to match backend API expectations
       const transactionData = {
         type: data.type,
-        transactionDate: data.date,  // Backend expects 'transactionDate'
+        transactionDate,  // Backend expects 'transactionDate'
         amount: parseFloat(data.amount),
         currency: currency,
         notes: data.notes || null

@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { requiredDateString, todayInputValue } from '../../utils/dateInput';
 import {
   Box,
   TextField,
@@ -17,12 +18,12 @@ const schema = yup.object().shape({
   interestRate: yup.number().min(0).max(100).required('Interest rate is required'),
   tenure: yup.number().positive('Tenure must be positive').required('Tenure is required'),
   tenureUnit: yup.string().required('Tenure unit is required'),
-  startDate: yup.date().required('Start date is required'),
+  startDate: requiredDateString('Start date'),
   currency: yup.string().required('Currency is required'),
   notes: yup.string()
 });
 
-const RDForm = ({ onSubmit, onCancel }) => {
+const RDForm = ({ onSubmit, onCancel, initialData }) => {
   const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -32,9 +33,10 @@ const RDForm = ({ onSubmit, onCancel }) => {
       interestRate: '',
       tenure: '',
       tenureUnit: 'YEARS',
-      startDate: new Date().toISOString().split('T')[0],
+      startDate: todayInputValue(),
       currency: 'INR',
-      notes: ''
+      notes: '',
+      ...initialData
     }
   });
 

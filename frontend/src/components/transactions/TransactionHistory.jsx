@@ -33,7 +33,7 @@ const TransactionHistory = ({ transactions, onEdit, onDelete }) => {
       DIVIDEND: 'info',
       INTEREST: 'info',
       CONTRIBUTION: 'success',
-      MATURITY: 'warning'
+      WITHDRAWAL: 'warning'
     };
     return colors[type] || 'default';
   };
@@ -79,7 +79,7 @@ const TransactionHistory = ({ transactions, onEdit, onDelete }) => {
             <MenuItem value="DIVIDEND">Dividend</MenuItem>
             <MenuItem value="INTEREST">Interest</MenuItem>
             <MenuItem value="CONTRIBUTION">Contribution</MenuItem>
-            <MenuItem value="MATURITY">Maturity</MenuItem>
+            <MenuItem value="WITHDRAWAL">Withdrawal</MenuItem>
           </Select>
         </FormControl>
         <TextField

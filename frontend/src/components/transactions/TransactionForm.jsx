@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { requiredDateString, todayInputValue } from '../../utils/dateInput';
 import {
   Box,
   TextField,
@@ -13,7 +14,7 @@ import {
 
 const schema = yup.object().shape({
   type: yup.string().required('Transaction type is required'),
-  date: yup.date().required('Date is required'),
+  date: requiredDateString('Date'),
   quantity: yup.number().positive('Quantity must be positive'),
   price: yup.number().positive('Price must be positive'),
   amount: yup.number().positive('Amount must be positive').required('Amount is required'),
@@ -25,7 +26,7 @@ const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
     resolver: yupResolver(schema),
     defaultValues: {
       type: 'BUY',
-      date: new Date().toISOString().split('T')[0],
+      date: todayInputValue(),
       quantity: '',
       price: '',
       amount: '',
@@ -46,9 +47,11 @@ const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
 
   const getTransactionTypes = () => {
     const baseTypes = ['BUY', 'SELL'];
-    
+
     if (['FD', 'RD', 'NPS', 'PPF'].includes(investmentType)) {
-      return ['CONTRIBUTION', 'MATURITY', 'INTEREST'];
+      // MATURITY was offered here but is not a backend TransactionType and
+      // every submission failed; WITHDRAWAL covers the maturity payout.
+      return ['CONTRIBUTION', 'INTEREST', 'WITHDRAWAL'];
     }
     
     if (investmentType === 'EQUITY') {
@@ -56,7 +59,7 @@ const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
     }
     
     if (investmentType === 'BOND') {
-      return [...baseTypes, 'INTEREST', 'MATURITY'];
+      return [...baseTypes, 'INTEREST', 'WITHDRAWAL'];
     }
     
     return baseTypes;

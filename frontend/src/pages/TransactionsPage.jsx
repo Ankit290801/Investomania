@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Paper, Alert } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Upload as UploadIcon } from '@mui/icons-material';
 import TransactionHistory from '../components/transactions/TransactionHistory';
 import TransactionDialog from '../components/transactions/TransactionDialog';
+import StatementImportDialog from '../components/transactions/StatementImportDialog';
 import { transactionService } from '../services/transactionService';
 import { investmentService } from '../services/investmentService';
 import Loading from '../components/common/Loading';
 
 const TransactionsPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [investments, setInvestments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,14 +70,23 @@ const TransactionsPage = () => {
         <Typography variant="h4">
           Transactions
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-          disabled={investments.length === 0}
-        >
-          Add Transaction
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<UploadIcon />}
+            onClick={() => setImportDialogOpen(true)}
+          >
+            Import Statement (PDF)
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenDialog(true)}
+            disabled={investments.length === 0}
+          >
+            Add Transaction
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -143,6 +154,13 @@ const TransactionsPage = () => {
         onClose={() => setOpenDialog(false)}
         investments={investments}
         onSuccess={handleTransactionCreated}
+      />
+
+      <StatementImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={handleTransactionCreated}
+        investments={investments}
       />
     </Box>
   );

@@ -31,6 +31,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import snapshotService from '../services/snapshotService';
 import { formatCurrency } from '../utils/currencyFormatter';
+import SegmentCompositionChart from '../components/snapshots/SegmentCompositionChart';
 
 /**
  * Snapshot Management Page
@@ -196,6 +197,11 @@ export default function SnapshotPage() {
 
       {(loading || generating) && <LinearProgress sx={{ mb: 2 }} />}
 
+      {/* Composition-over-time chart (F4) */}
+      {snapshots.length > 0 && (
+        <SegmentCompositionChart snapshots={snapshots} />
+      )}
+
       {/* Snapshots table */}
       {snapshots.length === 0 && !loading ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
@@ -232,7 +238,7 @@ export default function SnapshotPage() {
                     </TableCell>
                     <TableCell align="right">
                       {formatCurrency(
-                        (parseFloat(s.equityValue || 0) + parseFloat(s.privateEquityValue || 0)),
+                        (parseFloat(s.equityValue || 0)),
                         s.currency
                       )}
                     </TableCell>

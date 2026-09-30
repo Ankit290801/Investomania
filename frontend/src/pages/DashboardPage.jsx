@@ -70,7 +70,7 @@ const DashboardPage = () => {
         return null;
       });
       
-      const categoryBreakdownPromise = expenseService.getCategoryBreakdown().catch(err => {
+      const categoryBreakdownPromise = expenseService.getCategoryBreakdown(null, null, currency).catch(err => {
         console.error('Category Breakdown error:', err);
         return null;
       });

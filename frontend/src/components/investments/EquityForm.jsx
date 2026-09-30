@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { requiredDateString, todayInputValue } from '../../utils/dateInput';
 import {
   Box,
   TextField,
@@ -17,7 +18,7 @@ const schema = yup.object().shape({
   name: yup.string().required('Company name is required'),
   quantity: yup.number().positive('Quantity must be positive').required('Quantity is required'),
   purchasePrice: yup.number().positive('Price must be positive').required('Purchase price is required'),
-  purchaseDate: yup.date().required('Purchase date is required'),
+  purchaseDate: requiredDateString('Purchase date'),
   market: yup.string().required('Market is required'),
   currency: yup.string().required('Currency is required'),
   broker: yup.string(),
@@ -25,7 +26,7 @@ const schema = yup.object().shape({
   isListed: yup.boolean()
 });
 
-const EquityForm = ({ onSubmit, onCancel }) => {
+const EquityForm = ({ onSubmit, onCancel, initialData }) => {
   const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -33,12 +34,13 @@ const EquityForm = ({ onSubmit, onCancel }) => {
       name: '',
       quantity: '',
       purchasePrice: '',
-      purchaseDate: new Date().toISOString().split('T')[0],
+      purchaseDate: todayInputValue(),
       market: 'NSE',
       currency: 'INR',
       broker: '',
       notes: '',
-      isListed: true
+      isListed: true,
+      ...initialData
     }
   });
 

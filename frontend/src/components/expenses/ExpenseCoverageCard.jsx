@@ -1,8 +1,13 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box, LinearProgress } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { Card, CardContent, Typography, Box } from '@mui/material';
 import { TrendingUp, TrendingDown } from '@mui/icons-material';
 import { formatCurrency } from '../../utils/currencyFormatter';
 
+/**
+ * F1: expense coverage card — stat rows with tabular numerals and a
+ * slimmer, rounded progress bar; coverage % becomes the headline.
+ */
 const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
   if (!coverage) return null;
 
@@ -12,16 +17,16 @@ const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
-        <Typography color="text.secondary" gutterBottom variant="h6">
+        <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
           Expense Coverage
         </Typography>
 
-        <Box sx={{ my: 3 }}>
+        <Box sx={{ my: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
               Total Expenses
             </Typography>
-            <Typography variant="body2" fontWeight="medium">
+            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatCurrency(totalExpenses, currency)}
             </Typography>
           </Box>
@@ -30,33 +35,50 @@ const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
             <Typography variant="body2" color="text.secondary">
               Investment Income
             </Typography>
-            <Typography variant="body2" fontWeight="medium" color="success.main">
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              color="success.main"
+              sx={{ fontVariantNumeric: 'tabular-nums' }}
+            >
               {formatCurrency(totalIncome, currency)}
             </Typography>
           </Box>
 
-          <LinearProgress
-            variant="determinate"
-            value={Math.min(coveragePercentage, 100)}
-            color={isCovered ? 'success' : 'warning'}
-            sx={{ height: 10, borderRadius: 1, mb: 1 }}
-          />
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isCovered ? (
-              <TrendingUp color="success" />
-            ) : (
-              <TrendingDown color="warning" />
-            )}
-            <Typography
-              variant="h5"
-              color={isCovered ? 'success.main' : 'warning.main'}
-            >
-              {coveragePercentage.toFixed(1)}%
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {isCovered ? (
+                <TrendingUp color="success" sx={{ fontSize: 20 }} />
+              ) : (
+                <TrendingDown color="warning" sx={{ fontSize: 20 }} />
+              )}
+              <Typography variant="h4" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                {coveragePercentage.toFixed(1)}%
+              </Typography>
+            </Box>
             <Typography variant="body2" color="text.secondary">
               {isCovered ? 'Fully Covered' : 'Partially Covered'}
             </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              mt: 1.5,
+              backgroundColor: 'action.hover',
+              overflow: 'hidden'
+            }}
+          >
+            <Box
+              sx={{
+                height: '100%',
+                width: `${Math.min(Math.max(coveragePercentage, 0), 100)}%`,
+                borderRadius: 4,
+                backgroundColor: isCovered ? 'success.main' : 'warning.main',
+                transition: 'width 0.4s ease'
+              }}
+            />
           </Box>
         </Box>
 

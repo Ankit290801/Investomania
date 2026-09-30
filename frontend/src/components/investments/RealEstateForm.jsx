@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { requiredDateString, todayInputValue } from '../../utils/dateInput';
 import {
   Box,
   TextField,
@@ -16,14 +17,14 @@ const schema = yup.object().shape({
   location: yup.string().required('Location is required'),
   address: yup.string(),
   purchasePrice: yup.number().positive('Price must be positive').required('Purchase price is required'),
-  purchaseDate: yup.date().required('Purchase date is required'),
+  purchaseDate: requiredDateString('Purchase date'),
   area: yup.number().positive('Area must be positive'),
   areaUnit: yup.string(),
   currency: yup.string().required('Currency is required'),
   notes: yup.string()
 });
 
-const RealEstateForm = ({ onSubmit, onCancel }) => {
+const RealEstateForm = ({ onSubmit, onCancel, initialData }) => {
   const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -32,11 +33,12 @@ const RealEstateForm = ({ onSubmit, onCancel }) => {
       location: '',
       address: '',
       purchasePrice: '',
-      purchaseDate: new Date().toISOString().split('T')[0],
+      purchaseDate: todayInputValue(),
       area: '',
       areaUnit: 'SQ_FT',
       currency: 'INR',
-      notes: ''
+      notes: '',
+      ...initialData
     }
   });
 

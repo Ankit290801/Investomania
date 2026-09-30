@@ -1,10 +1,8 @@
 // Application constants
-export const CHART_COLORS = {
-  equity: '#4caf50',
-  bonds: '#2196f3',
-  safeAssets: '#ff9800',
-  illiquidAssets: '#9c27b0',
-};
+// NOTE (E5-lite): chart/asset colours used to live here as raw hexes and
+// drifted from the design system. All colours are now owned by
+// `config/theme.js` (CHART_COLORS, BRAND_GRADIENT, semantic) — do not
+// reintroduce colour constants in this file.
 
 export const DATE_FORMATS = {
   display: 'MMM dd, yyyy',
@@ -19,7 +17,6 @@ export const INVESTMENT_TYPES = [
   'RD',
   'NPS',
   'PPF',
-  'PRIVATE_EQUITY',
   'REAL_ESTATE',
   'CRYPTO',
   'CASH',

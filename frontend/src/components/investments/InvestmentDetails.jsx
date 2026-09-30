@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,17 +16,56 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Alert
 } from '@mui/material';
 import { TrendingUp, TrendingDown } from '@mui/icons-material';
+import { investmentService } from '../../services/investmentService';
+import { transactionService } from '../../services/transactionService';
+import { computePnl } from '../../utils/investmentMetrics';
+import { formatCurrency } from '../../utils/currencyFormatter';
 
 const InvestmentDetails = ({ investment, open, onClose }) => {
+  // (formatting helpers imported from utils/currencyFormatter)
+  const [transactions, setTransactions] = useState([]);
+  const [txnLoading, setTxnLoading] = useState(false);
+  const [txnError, setTxnError] = useState(null);
+
+  // INV-1: the row payload no longer carries transactions — fetch the real
+  // history from the API so the section is never silently empty.
+  useEffect(() => {
+    if (!open || !investment?.id) {
+      setTransactions([]);
+      setTxnError(null);
+      return;
+    }
+    let cancelled = false;
+    setTxnLoading(true);
+    setTxnError(null);
+    transactionService
+      .getTransactionHistory(investment.id)
+      .then((data) => {
+        if (!cancelled) setTransactions(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Error fetching transaction history:', err);
+          setTxnError(err.response?.data?.error || err.message || 'Failed to load transactions');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTxnLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, investment?.id]);
+
   if (!investment) return null;
 
-  const formatCurrency = (value, currency) => {
-    const symbols = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
-    return `${symbols[currency] || currency} ${value.toLocaleString()}`;
-  };
+  const { cost, pnl, pnlPct } = computePnl(investment);
+  const hasPnl = pnl != null;
+  const pnlPositive = hasPnl && pnl >= 0;
 
   const getTypeColor = (type) => {
     const colors = {
@@ -37,7 +76,8 @@ const InvestmentDetails = ({ investment, open, onClose }) => {
       NPS: 'warning',
       PPF: 'success',
       REAL_ESTATE: 'error',
-      CRYPTO: 'warning'
+      CRYPTO: 'warning',
+      CASH: 'default'
     };
     return colors[type] || 'default';
   };
@@ -51,6 +91,14 @@ const InvestmentDetails = ({ investment, open, onClose }) => {
       CONTRIBUTION: 'success'
     };
     return colors[type] || 'default';
+  };
+
+  // Prefer transactionDate; fall back to createdAt for legacy rows missing it.
+  const formatTxnDate = (t) => {
+    const raw = t?.transactionDate || t?.createdAt || null;
+    if (!raw) return '-';
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? '-' : d.toLocaleDateString();
   };
 
   return (
@@ -68,47 +116,53 @@ const InvestmentDetails = ({ investment, open, onClose }) => {
               Current Value
             </Typography>
             <Typography variant="h4">
-              {formatCurrency(investment.currentValue, investment.currency)}
+              {investment.currentValue != null
+                ? formatCurrency(investment.currentValue, investment.currency)
+                : '\u2014'}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
-              Purchase Value
+              Cost Basis
             </Typography>
             <Typography variant="h5">
-              {formatCurrency(investment.purchaseValue, investment.currency)}
+              {cost != null ? formatCurrency(cost, investment.currency) : '\u2014'}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Gain/Loss
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {investment.growth >= 0 ? (
-                <TrendingUp color="success" />
-              ) : (
-                <TrendingDown color="error" />
-              )}
-              <Typography
-                variant="h5"
-                sx={{ color: investment.growth >= 0 ? 'success.main' : 'error.main' }}
-              >
-                {formatCurrency(
-                  investment.currentValue - investment.purchaseValue,
-                  investment.currency
-                )}
-                <Typography component="span" variant="body1" sx={{ ml: 1 }}>
-                  ({investment.growth >= 0 ? '+' : ''}{investment.growth}%)
-                </Typography>
+            {!hasPnl ? (
+              <Typography variant="h5" color="text.secondary">
+                {'\u2014'}
               </Typography>
-            </Box>
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {pnlPositive ? <TrendingUp color="success" /> : <TrendingDown color="error" />}
+                <Typography
+                  variant="h5"
+                  sx={{ color: pnlPositive ? 'success.main' : 'error.main' }}
+                >
+                  {formatCurrency(pnl, investment.currency)}
+                  {pnlPct != null && (
+                    <Typography component="span" variant="body1" sx={{ ml: 1 }}>
+                      ({pnlPositive ? '+' : ''}
+                      {pnlPct.toFixed(2)}%)
+                    </Typography>
+                  )}
+                </Typography>
+              </Box>
+            )}
           </Grid>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Purchase Date
             </Typography>
             <Typography variant="h6">
-              {new Date(investment.purchaseDate).toLocaleDateString()}
+              {investment.purchaseDate
+                ? new Date(`${investment.purchaseDate}T00:00:00`).toLocaleDateString()
+                : '\u2014'}
             </Typography>
           </Grid>
         </Grid>
@@ -118,6 +172,11 @@ const InvestmentDetails = ({ investment, open, onClose }) => {
         <Typography variant="h6" gutterBottom>
           Transaction History
         </Typography>
+        {txnError && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setTxnError(null)}>
+            {txnError}
+          </Alert>
+        )}
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
             <TableHead>
@@ -130,10 +189,18 @@ const InvestmentDetails = ({ investment, open, onClose }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {investment.transactions?.length > 0 ? (
-                investment.transactions.map((transaction) => (
+              {txnLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    <Typography variant="body2" color="text.secondary">
+                      Loading transactions…
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : transactions.length > 0 ? (
+                transactions.map((transaction) => (
                   <TableRow key={transaction.id}>
-                    <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatTxnDate(transaction)}</TableCell>
                     <TableCell>
                       <Chip
                         label={transaction.type}
@@ -143,12 +210,12 @@ const InvestmentDetails = ({ investment, open, onClose }) => {
                     </TableCell>
                     <TableCell align="right">{transaction.quantity || '-'}</TableCell>
                     <TableCell align="right">
-                      {transaction.price
-                        ? formatCurrency(transaction.price, investment.currency)
+                      {transaction.pricePerUnit
+                        ? formatCurrency(transaction.pricePerUnit, transaction.currency)
                         : '-'}
                     </TableCell>
                     <TableCell align="right">
-                      {formatCurrency(transaction.amount, investment.currency)}
+                      {formatCurrency(transaction.amount, transaction.currency)}
                     </TableCell>
                   </TableRow>
                 ))

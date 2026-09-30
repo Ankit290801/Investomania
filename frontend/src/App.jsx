@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
+import { PwaProvider } from './contexts/PwaContext';
+import PwaToasts from './components/common/PwaToasts';
+import { ThemeProvider, useThemePreference } from './contexts/ThemeContext';
+import { buildAppTheme } from './config/theme';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -15,22 +19,17 @@ import TaxReportsPage from './pages/TaxReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import SnapshotPage from './pages/SnapshotPage';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
-
-function App() {
+/**
+ * F1: theme is resolved from the user's saved preference (F5 `theme` field,
+ * mirrored in localStorage) and rebuilt only when the resolved mode changes.
+ */
+const ThemedApp = () => {
+  const { mode } = useThemePreference();
+  const theme = useMemo(() => buildAppTheme(mode), [mode]);
   return (
-    <ThemeProvider theme={theme}>
+    <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
+      <PwaProvider>
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
@@ -45,7 +44,8 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/investments" element={<InvestmentsPage />} />
+            {/* E2: descendant <Routes> inside InvestmentsPage needs the trailing wildcard to match /investments/:type sub-screens. */}
+            <Route path="/investments/*" element={<InvestmentsPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
             <Route path="/tax-reports" element={<TaxReportsPage />} />
@@ -59,8 +59,21 @@ function App() {
           {/* Catch all - redirect to dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </AuthProvider>
-    </ThemeProvider>
+      <PwaToasts />
+      </PwaProvider>
+    </MuiThemeProvider>
+  );
+}
+
+function App() {
+  // E11: AuthProvider above ThemeProvider — the theme context syncs the
+  // preference to backend settings only while signed in.
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

@@ -22,19 +22,17 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
-
-const CURRENCY_SYMBOLS = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+import { formatCurrency as formatCurrencyValue } from '../../utils/currencyFormatter';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '\u2014';
-  const d = new Date(dateStr);
+  const d = new Date(`${dateStr}T00:00:00`);
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const formatCurrency = (value, currency) => {
   if (value === null || value === undefined || Number.isNaN(value)) return '\u2014';
-  const symbol = CURRENCY_SYMBOLS[currency] || currency || '';
-  return `${symbol} ${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  return formatCurrencyValue(value, currency);
 };
 
 const formatNumber = (value, fractionDigits = 4) => {

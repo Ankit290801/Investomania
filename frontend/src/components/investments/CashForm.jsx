@@ -23,7 +23,7 @@ const schema = yup.object().shape({
   notes: yup.string()
 });
 
-const CashForm = ({ onSubmit, onCancel }) => {
+const CashForm = ({ onSubmit, onCancel, initialData }) => {
   const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -36,7 +36,8 @@ const CashForm = ({ onSubmit, onCancel }) => {
       interestRate: '',
       ifscCode: '',
       routingNumber: '',
-      notes: ''
+      notes: '',
+      ...initialData
     }
   });
 
