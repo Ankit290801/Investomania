@@ -1,0 +1,21 @@
+# --- Build outputs ---
+backend/target/
+frontend/dist/
+frontend/node_modules/
+
+# --- Runtime data (NEVER commit the live H2 database) ---
+backend/data/
+backend/logs/
+*.log
+*.mv.db
+*.trace.db
+
+# --- Tool state ---
+.freebuff/
+
+# --- IDE / OS ---
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
