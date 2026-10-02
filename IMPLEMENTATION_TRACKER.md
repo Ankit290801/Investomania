@@ -4355,6 +4355,7 @@ below is 🟢 complete unless a status marker inside says otherwise.
 | TODO: Cross-Screen Bug Fixes (June 6, 2026) | Investments, transactions, dashboard, snapshots — 10/10 | 🟢 Complete |
 | DB Schema ↔ Entity/DTO Audit (September 22, 2026) | Unused/outdated/misnamed columns | 🟢 Complete |
 | Backup/Restore Restore Failure (October 2, 2026) | Restore reported "not a valid backup JSON"; real cause: Hibernate flush-order unique-index violation + silent ID loss on IDENTITY re-insert + missing ExpenseAssetMappings. Fixed with bulk JPQL wipes, old→new ID remapping, extended envelope; live round-trip ×2. Full record: Phase 9 task 8.4 | 🟢 Complete |
+| E2 — Expense mapping dropdown empty / "Failed to load data" (October 2, 2026) | **Symptom**: `ExpenseMappingDialog` dropdown for investments showed nothing and reported "Failed to load data". **Root cause**: frontend `investmentService.js` defined `getAll()` but not `getAllInvestments()`, while `ExpenseMappingDialog` called the latter (54); backend `InvestmentController` did implement `GET /api/investments → getAllInvestments`, so the dropdown was left empty rather than crashing. Fix: add `getAllInvestments()` to `investmentService.js` pointing at `/api/investments`; `e2-check.cjs` all 85 files import/defined, `vite build` green, `mvn test` 57/57 green. | 🟢 Complete |
 
 The full dated records follow, in their original detail.
 

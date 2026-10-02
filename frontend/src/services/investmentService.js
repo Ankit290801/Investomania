@@ -25,4 +25,10 @@ export const investmentService = {
     const response = await api.delete(`/investments/${id}`);
     return response.data;
   },
+
+  // E2 — per-asset-class sub-screens and the expense-mapping dropdown.
+  async getAllInvestments() {
+    const response = await api.get('/investments');
+    return response.data;
+  },
 };
