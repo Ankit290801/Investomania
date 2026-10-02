@@ -82,6 +82,22 @@ export const expenseService = {
     return response.data;
   },
 
+  // Analytics read-model for the expense panels.
+  async getAnalytics(currency = 'INR') {
+    const params = new URLSearchParams();
+    if (currency) params.append('currency', currency);
+    const response = await api.get(`/expenses/analytics?${params.toString()}`);
+    return response.data;
+  },
+
+  // Category mix percentages for the latest full year.
+  async getCategoryMix(currency = 'INR') {
+    const params = new URLSearchParams();
+    if (currency) params.append('currency', currency);
+    const response = await api.get(`/expenses/category-mix?${params.toString()}`);
+    return response.data;
+  },
+
   // Excel import (backlog feature F2)
   async importPreview(file) {
     const formData = new FormData();

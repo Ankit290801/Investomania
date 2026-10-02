@@ -221,4 +221,40 @@ public class ExpenseController {
         Map<String, BigDecimal> trend = coverageService.getMonthlyTrend(userId, months, currency);
         return ResponseEntity.ok(trend);
     }
+
+    /**
+     * GET /api/expenses/analytics
+     * Consolidated analytics read-model for the expense panels: latest-month
+     * total, prior-month total, month-over-month change, year-over-year
+     * change, per-category totals, average monthly spend over the reported
+     * range, the single largest spending category, and how many months had
+     * any spend.
+     */
+    @GetMapping("/analytics")
+    public ResponseEntity<Map<String, Object>> getExpenseAnalytics(
+            @RequestParam(defaultValue = "INR") String currency) {
+        
+        Long userId = securityUtil.getCurrentUserId();
+        log.info("GET /api/expenses/analytics - User: {}, Currency: {}", userId, currency);
+        
+        Map<String, Object> analytics = coverageService.getExpenseAnalytics(userId, currency);
+        return ResponseEntity.ok(analytics);
+    }
+
+    /**
+     * GET /api/expenses/category-mix
+     * Category breakdown as percentages of the latest full year, for the
+     * frontend to render a rank or a pie without doing its own currency
+     * math.
+     */
+    @GetMapping("/category-mix")
+    public ResponseEntity<Map<String, BigDecimal>> getCategoryMix(
+            @RequestParam(defaultValue = "INR") String currency) {
+        
+        Long userId = securityUtil.getCurrentUserId();
+        log.info("GET /api/expenses/category-mix - User: {}, Currency: {}", userId, currency);
+        
+        Map<String, BigDecimal> mix = coverageService.getCategoryMix(userId, currency);
+        return ResponseEntity.ok(mix);
+    }
 }

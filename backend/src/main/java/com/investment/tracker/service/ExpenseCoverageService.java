@@ -133,4 +133,183 @@ public class ExpenseCoverageService {
         List<Expense> expenses = expenseRepository.findByUserIdAndDateRange(userId, startDate, endDate);
         return monthlyTotals(expenses, currency);
     }
+
+    /**
+     * Year-over-year expense growth: for the two most recent full calendar
+     * years found in the user's history, return the percentage change in
+     * total spend. Returns {@code null} when there's not enough history.
+     * Amounts are converted to {@code currency} before summing, so a mixed-
+     * currency history still produces a meaningful comparison.
+     */
+    public BigDecimal getYearOverYearGrowth(Long userId, String currency) {
+        List<Expense> all = expenseRepository.findByUserIdAndDateRange(
+                userId, LocalDate.of(2000, 1, 1), LocalDate.now());
+        Map<Integer, BigDecimal> byYear = all.stream()
+            .collect(Collectors.groupingBy(
+                e -> e.getExpenseDate().getYear(),
+                TreeMap::new,
+                Collectors.mapping(
+                    e -> toTarget(e.getAmount(), e.getCurrency(), currency),
+                    Collectors.reducing(BigDecimal.ZERO, BigDecimal::add)
+                )
+            ));
+        List<Integer> years = new ArrayList<>(byYear.keySet());
+        if (years.size() < 2) {
+            return null;
+        }
+        int recent = years.get(years.size() - 1);
+        int prior = years.get(years.size() - 2);
+        BigDecimal recentTotal = byYear.get(recent);
+        BigDecimal priorTotal = byYear.get(prior);
+        if (priorTotal.compareTo(BigDecimal.ZERO) == 0) {
+            return recentTotal.compareTo(BigDecimal.ZERO) > 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+        }
+        return recentTotal.subtract(priorTotal)
+                .divide(priorTotal, 4, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Month-over-month change for the most recent complete month against the
+     * month before it. Returns the percentage change (positive = spend went up).
+     * When there aren't two complete months of data, returns {@code null}.
+     */
+    public BigDecimal getMonthOverMonthGrowth(Long userId, String currency) {
+        YearMonth now = YearMonth.now();
+        YearMonth recent = now.isAfter(YearMonth.from(LocalDate.now())) ? now : now;
+        YearMonth m2 = recent;
+        YearMonth m1 = m2.minusMonths(1);
+
+        // Use only expenses dated strictly within each month so a partial
+        // current month does not distort the comparison.
+        LocalDate start2 = m2.atDay(1);
+        LocalDate end2 = m2.atEndOfMonth();
+        LocalDate start1 = m1.atDay(1);
+        LocalDate end1 = m1.atEndOfMonth();
+
+        BigDecimal sum2 = expenseRepository.findByUserIdAndDateRange(userId, start2, end2).stream()
+            .map(e -> toTarget(e.getAmount(), e.getCurrency(), currency))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal sum1 = expenseRepository.findByUserIdAndDateRange(userId, start1, end1).stream()
+            .map(e -> toTarget(e.getAmount(), e.getCurrency(), currency))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (sum2.compareTo(BigDecimal.ZERO) == 0 && sum1.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        if (sum1.compareTo(BigDecimal.ZERO) == 0) {
+            return sum2.compareTo(BigDecimal.ZERO) > 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+        }
+        return sum2.subtract(sum1).divide(sum1, 4, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Analytics read-model for the expense panels. One call returns the set
+     * of numbers the frontend panels need: latest month total, prior month
+     * total, latest month's month-over-month change, year-over-year change
+     * for the two most recent full years, per-category totals with each
+     * category's percentage of the latest full year, plus judgement-call
+     * roll-ups (average monthly spend over the reported range, the single
+     * largest spending category, and how many months had any spend).
+     */
+    public Map<String, Object> getExpenseAnalytics(Long userId, String currency) {
+        YearMonth now = YearMonth.now();
+        LocalDate today = LocalDate.now();
+        YearMonth latestFull = YearMonth.from(today);
+        if (today.getDayOfMonth() < today.lengthOfMonth() && today.isBefore(latestFull.atDay(today.getDayOfMonth()))) {
+            latestFull = latestFull.minusMonths(1);
+        }
+
+        YearMonth priorFull = latestFull.minusMonths(1);
+        YearMonth yearAgo = latestFull.minusYears(1);
+
+        LocalDate rangeStart = latestFull.atDay(1).minusYears(2);
+        LocalDate rangeEnd = latestFull.atEndOfMonth();
+
+        List<Expense> inRange = expenseRepository.findByUserIdAndDateRange(userId, rangeStart, rangeEnd);
+
+        Map<String, BigDecimal> categoryTotals = categoryTotals(inRange, currency);
+
+        YearMonth lfFinal = latestFull;
+        YearMonth pfFinal = priorFull;
+
+        BigDecimal latestMonthTotal = inRange.stream()
+            .filter(e -> YearMonth.from(e.getExpenseDate()).equals(lfFinal))
+            .map(e -> toTarget(e.getAmount(), e.getCurrency(), currency))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal priorMonthTotal = inRange.stream()
+            .filter(e -> YearMonth.from(e.getExpenseDate()).equals(pfFinal))
+            .map(e -> toTarget(e.getAmount(), e.getCurrency(), currency))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal latestMonthMoM = getMonthOverMonthGrowth(userId, currency);
+
+        BigDecimal yearOverYear = getYearOverYearGrowth(userId, currency);
+
+        // Average monthly spend over the reported two-year range (only months
+        // that actually have expenses are counted, so sparse histories aren't
+        // artificially depressed by empty months).
+        Set<YearMonth> activeMonths = inRange.stream()
+            .map(e -> YearMonth.from(e.getExpenseDate()))
+            .collect(Collectors.toCollection(TreeSet::new));
+        BigDecimal totalInRange = inRange.stream()
+            .map(e -> toTarget(e.getAmount(), e.getCurrency(), currency))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal avgMonthly = activeMonths.isEmpty()
+            ? BigDecimal.ZERO
+            : totalInRange.divide(BigDecimal.valueOf(activeMonths.size()), 2, RoundingMode.HALF_UP);
+
+        // Largest spending category by total in the reported range.
+        Map.Entry<String, BigDecimal> biggest = categoryTotals.entrySet().stream()
+            .max(Comparator.comparing(Map.Entry::getValue))
+            .orElse(null);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("currency", currency);
+        result.put("latestMonth", latestFull.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
+        result.put("latestMonthTotal", latestMonthTotal);
+        result.put("priorMonth", priorFull.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
+        result.put("priorMonthTotal", priorMonthTotal);
+        result.put("monthOverMonth", latestMonthMoM);
+        result.put("yearOverYear", yearOverYear);
+        result.put("categoryTotals", categoryTotals);
+        result.put("avgMonthly", avgMonthly);
+        result.put(" biggestCategory", biggest == null ? null : Map.of(
+                "category", biggest.getKey(), "amount", biggest.getValue()));
+        result.put("activeMonths", activeMonths.size());
+        return result;
+    }
+
+    /**
+     * Category mix percentages for the latest full year. Returns
+     * (category -> percentage of total) so the frontend can render a simple
+     * ranking or a pie without doing its own currency/concurrency math.
+     */
+    public Map<String, BigDecimal> getCategoryMix(Long userId, String currency) {
+        YearMonth now = YearMonth.now();
+        LocalDate today = LocalDate.now();
+        YearMonth latestFull = YearMonth.from(today);
+        if (today.getDayOfMonth() < today.lengthOfMonth() && today.isBefore(latestFull.atDay(today.getDayOfMonth()))) {
+            latestFull = latestFull.minusMonths(1);
+        }
+
+        LocalDate yearStart = latestFull.atDay(1);
+        LocalDate yearEnd = latestFull.atEndOfMonth();
+        List<Expense> inYear = expenseRepository.findByUserIdAndDateRange(userId, yearStart, yearEnd);
+
+        Map<String, BigDecimal> totals = categoryTotals(inYear, currency);
+        BigDecimal grandTotal = totals.values().stream()
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (grandTotal.compareTo(BigDecimal.ZERO) == 0) {
+            return new LinkedHashMap<>();
+        }
+
+        Map<String, BigDecimal> mix = new LinkedHashMap<>();
+        for (Map.Entry<String, BigDecimal> e : totals.entrySet()) {
+            mix.put(e.getKey(), e.getValue().divide(grandTotal, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)));
+        }
+        return mix;
+    }
 }

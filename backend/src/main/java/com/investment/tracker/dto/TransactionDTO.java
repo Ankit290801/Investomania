@@ -29,5 +29,7 @@ public class TransactionDTO {
     private LocalDate transactionDate;
     private String currency;
     private String notes;
+    /** E10: id of the expense that produced this EXPENSE transaction (null otherwise). */
+    private Long expenseId;
     private LocalDateTime createdAt;
 }

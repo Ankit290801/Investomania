@@ -2,6 +2,7 @@ package com.investment.tracker.repository;
 
 import com.investment.tracker.model.ExpenseAssetMapping;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -34,6 +35,23 @@ public interface ExpenseAssetMappingRepository extends JpaRepository<ExpenseAsse
      * Delete all mappings for a specific investment.
      */
     void deleteByInvestmentId(Long investmentId);
+
+    /**
+     * Task 8.4 backup/restore: every mapping whose expense belongs to the
+     * user (used for export and for the restore wipe).
+     */
+    @Query("SELECT m FROM ExpenseAssetMapping m WHERE m.expenseId IN " +
+           "(SELECT e.id FROM Expense e WHERE e.userId = :userId)")
+    List<ExpenseAssetMapping> findAllForUser(@Param("userId") Long userId);
+
+    /**
+     * Task 8.4 backup/restore: bulk delete, immediate JPQL execution —
+     * see TransactionRepository.deleteAllForUser for the flush-order rationale.
+     */
+    @Modifying
+    @Query("DELETE FROM ExpenseAssetMapping m WHERE m.expenseId IN " +
+           "(SELECT e.id FROM Expense e WHERE e.userId = :userId)")
+    void deleteAllForUser(@Param("userId") Long userId);
 
     /**
      * Calculate total percentage mapped for an expense.

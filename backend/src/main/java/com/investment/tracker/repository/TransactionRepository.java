@@ -3,6 +3,7 @@ package com.investment.tracker.repository;
 import com.investment.tracker.model.Transaction;
 import com.investment.tracker.model.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -71,6 +72,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      * Delete all transactions for a specific investment.
      */
     void deleteByInvestmentId(Long investmentId);
+
+    /**
+     * Task 8.4 backup/restore: bulk delete of every transaction owned via the
+     * user's investments. A JPQL bulk delete executes immediately, unlike a
+     * derived entity delete which Hibernate defers to flush — deferred deletes
+     * let same-transaction re-inserts collide with not-yet-deleted rows
+     * (unique indexes are re-checked per statement).
+     */
+    @Modifying
+    @Query("DELETE FROM Transaction t WHERE t.investmentId IN " +
+           "(SELECT i.id FROM Investment i WHERE i.userId = :userId)")
+    void deleteAllForUser(@Param("userId") Long userId);
 
     /**
      * Find transactions for an investment up to a specific date (inclusive).

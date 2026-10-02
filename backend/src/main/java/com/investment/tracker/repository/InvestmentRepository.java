@@ -3,6 +3,9 @@ package com.investment.tracker.repository;
 import com.investment.tracker.model.Investment;
 import com.investment.tracker.model.InvestmentType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -39,4 +42,12 @@ public interface InvestmentRepository extends JpaRepository<Investment, Long> {
      * Count total investments for a user.
      */
     long countByUserId(Long userId);
+
+    /**
+     * Task 8.4 backup/restore: bulk delete, immediate JPQL execution —
+     * see TransactionRepository.deleteAllForUser for the flush-order rationale.
+     */
+    @Modifying
+    @Query("DELETE FROM Investment i WHERE i.userId = :userId")
+    void deleteAllForUser(@Param("userId") Long userId);
 }

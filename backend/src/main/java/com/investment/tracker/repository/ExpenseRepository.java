@@ -3,6 +3,7 @@ package com.investment.tracker.repository;
 import com.investment.tracker.model.Expense;
 import com.investment.tracker.model.ExpenseCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -69,4 +70,12 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
      * Count expenses for a user.
      */
     long countByUserId(Long userId);
+
+    /**
+     * Task 8.4 backup/restore: bulk delete, immediate JPQL execution —
+     * see TransactionRepository.deleteAllForUser for the flush-order rationale.
+     */
+    @Modifying
+    @Query("DELETE FROM Expense e WHERE e.userId = :userId")
+    void deleteAllForUser(@Param("userId") Long userId);
 }

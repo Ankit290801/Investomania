@@ -232,6 +232,7 @@ public class TransactionService {
                 .transactionDate(transaction.getTransactionDate())
                 .currency(transaction.getCurrency())
                 .notes(transaction.getNotes())
+                .expenseId(transaction.getExpenseId())
                 .createdAt(transaction.getCreatedAt())
                 .build();
     }
