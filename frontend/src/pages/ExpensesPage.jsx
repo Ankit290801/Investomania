@@ -14,20 +14,25 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
   Divider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
 } from '@mui/material';
-import { Add as AddIcon, Upload as UploadIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Upload as UploadIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+} from '@mui/icons-material';
 import ExpenseDialog from '../components/expenses/ExpenseDialog';
 import ExpenseList from '../components/expenses/ExpenseList';
 import ExpenseMappingDialog from '../components/expenses/ExpenseMappingDialog';
 import ExpenseImportDialog from '../components/expenses/ExpenseImportDialog';
 import { expenseService } from '../services/expenseService';
 import { formatCurrency, formatCurrencyWithSign, formatPercent, formatPercentPlain } from '../utils/currencyFormatter';
+import { seriesColor } from '../utils/chartHelpers';
 
 const categories = [
   { value: '', label: 'All Categories' },
@@ -93,22 +98,11 @@ const ExpensesPage = () => {
     }
   };
 
+  // Single refresh path for every mutation/import: the expense list and the
+  // analytics panels always move together so the panels can never show stale
+  // numbers after an expense is added, edited or deleted.
   const refreshAll = async () => {
-    setLoading(true);
-    setAnalyticsLoading(true);
-    try {
-      await Promise.all([
-        expenseService.getAll(categoryFilter || null),
-        expenseService.getAnalytics(baseCurrency),
-        expenseService.getCategoryMix(baseCurrency),
-      ]).then(([expenses]) => setExpenses(expenses));
-    } catch (err) {
-      console.error('Error refreshing expenses:', err);
-      setError('Failed to refresh. Please try again.');
-    } finally {
-      setLoading(false);
-      setAnalyticsLoading(false);
-    }
+    await Promise.all([fetchExpenses(), fetchAnalytics()]);
   };
 
   const handleOpenDialog = (expense = null) => {
@@ -130,7 +124,7 @@ const ExpensesPage = () => {
       }
       
       handleCloseDialog();
-      fetchExpenses();
+      await refreshAll();
     } catch (err) {
       console.error('Error saving expense:', err);
       setError('Failed to save expense. Please try again.');
@@ -144,7 +138,7 @@ const ExpensesPage = () => {
 
     try {
       await expenseService.delete(id);
-      fetchExpenses();
+      await refreshAll();
     } catch (err) {
       console.error('Error deleting expense:', err);
       setError('Failed to delete expense. Please try again.');
@@ -159,7 +153,7 @@ const ExpensesPage = () => {
   const handleCloseMapping = () => {
     setSelectedExpense(null);
     setMappingDialogOpen(false);
-    fetchExpenses(); // Refresh to show updated mappings
+    refreshAll(); // Refresh the list and the analytics after mapping changes
   };
 
   if (loading) {
@@ -172,7 +166,9 @@ const ExpensesPage = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      {/* E8: tour anchor — header row (filter + import/add buttons) is the
+          Expenses stop of the site guide. */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} data-tour="expenses-header">
         <Typography variant="h4">
           Expenses
         </Typography>
@@ -216,19 +212,18 @@ const ExpensesPage = () => {
         </Alert>
       )}
 
-      <ExpenseList
-        expenses={expenses}
-        onEdit={handleOpenDialog}
-        onDelete={handleDelete}
-        onMap={handleOpenMapping}
-      />
-
       <ExpenseAnalyticsPanels
         analytics={analytics}
         categoryMix={categoryMix}
         currency={baseCurrency}
         loading={analyticsLoading}
-        onRefresh={fetchAnalytics}
+      />
+
+      <ExpenseList
+        expenses={expenses}
+        onEdit={handleOpenDialog}
+        onDelete={handleDelete}
+        onMap={handleOpenMapping}
       />
 
       <ExpenseDialog
@@ -256,19 +251,22 @@ const ExpensesPage = () => {
 /**
  * Expense growth + analytics panels (E14).
  *
+ * Sits above the expense table (Equity-screen shape: summary cards first,
+ * detail table below) and follows the app's F1 card conventions — overline
+ * headings, tabular figures, theme tokens and seriesColor category dots.
+ *
  * Shows:
  *  - Latest month summary + month-over-month growth (the MoM change as both
  *    an absolute delta and a percentage).
  *  - Year-over-year growth for the two most recent full years.
- *  - Category mix for the latest full year as both a ranked list and a small
- *    pie.
- *  - Judgement-call roll-ups: average monthly spend over the reported range,
- *    the single biggest spending category, and how many months had any spend.
+ *  - Category mix for the latest full year as a ranked table.
+ *  - Roll-ups: average monthly spend, the single biggest spending category,
+ *    and how many months had any spend.
  */
-const ExpenseAnalyticsPanels = ({ analytics, categoryMix, currency, loading, onRefresh }) => {
+const ExpenseAnalyticsPanels = ({ analytics, categoryMix, currency, loading }) => {
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4, mb: 3 }}>
         <CircularProgress size={20} />
       </Box>
     );
@@ -292,18 +290,38 @@ const ExpenseAnalyticsPanels = ({ analytics, categoryMix, currency, loading, onR
   const latestMonthDelta = latestMonthTotal - priorMonthTotal;
   const momPct = typeof monthOverMonth === 'number' ? monthOverMonth * 100 : null;
   const yoyPct = typeof yearOverYear === 'number' ? yearOverYear * 100 : null;
-  const signedLatestMonthDelta = formatCurrencyWithSign(latestMonthDelta, currency);
   const momGrowthText = momPct != null ? formatPercent(momPct) : '—';
   const yoyGrowthText = yoyPct != null ? formatPercent(yoyPct) : '—';
-  const monthOverMonthPositive = momPct != null && momPct > 0;
-  const yearOverYearPositive = yoyPct != null && yoyPct > 0;
+
+  // For expenses, "up" is the worrying direction: more spend reads red, less
+  // spend reads green, flat reads neutral. Tokens only (no raw colours).
+  const expenseTrendColor = (pct) =>
+    pct == null || pct === 0 ? 'text.secondary' : pct > 0 ? 'error.main' : 'success.main';
+
+  const momExplanation =
+    momPct == null
+      ? 'Not enough history to compare months yet.'
+      : momPct > 0
+      ? 'Spend increased versus the prior month.'
+      : momPct < 0
+      ? 'Spend decreased versus the prior month.'
+      : 'No change versus the prior month.';
+
+  const yoyExplanation =
+    yoyPct == null
+      ? 'Not enough history to compare years yet.'
+      : yoyPct > 0
+      ? 'Expenses grew year-on-year.'
+      : yoyPct < 0
+      ? 'Expenses fell year-on-year.'
+      : 'Expenses were flat year-on-year.';
 
   const categoryRows = Object.entries(categoryTotals)
     .sort((a, b) => b[1] - a[1])
     .map(([category, amount]) => {
-      const pct = categoryMix[category];
+      const pct = categoryMix ? categoryMix[category] : undefined;
       const pctText = typeof pct === 'number' ? formatPercentPlain(pct, 1) : '—';
-      return { category, amount, pct, pctText };
+      return { category, amount, pctText };
     });
 
   const biggestText = biggestCategory
@@ -311,158 +329,189 @@ const ExpenseAnalyticsPanels = ({ analytics, categoryMix, currency, loading, onR
     : '—';
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h6" sx={{ mb: 1 }}>
-        Expense Analytics
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Growth trends, category mix and roll-up stats for the latest full month against the month before.
-      </Typography>
+    <Grid container spacing={3} sx={{ mb: 3 }}>
+      {/* Latest month summary + MoM growth */}
+      <Grid item xs={12} md={6}>
+        <Card sx={{ height: '100%' }}>
+          <CardContent>
+            <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
+              Latest month — {latestMonth}
+            </Typography>
 
-      <Grid container spacing={3}>
-        {/* Latest month summary + MoM growth */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Latest month — {latestMonth}
-              </Typography>
+            <Typography variant="h5" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(latestMonthTotal, currency)}
+            </Typography>
 
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 2 }}>
-                <Typography variant="h5">{formatCurrency(latestMonthTotal, currency)}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {activeMonths} active months in report window
-                </Typography>
-              </Box>
+            <Divider sx={{ my: 2 }} />
 
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  vs {priorMonth}
-                </Typography>
-                <Chip
-                  label={signedLatestMonthDelta}
-                  color={latestMonthDelta > 0 ? 'error' : latestMonthDelta < 0 ? 'success' : 'default'}
-                  size="small"
-                />
-              </Box>
-
-              <Typography variant="h6" sx={{ mt: 1, mb: 1 }}>
-                Month-over-month growth
-              </Typography>
-              <Typography variant="body1">
-                {momGrowthText}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {latestMonthDelta > 0 && 'Spend increased this month.'}
-                {latestMonthDelta < 0 && 'Spend decreased this month.'}
-                {latestMonthDelta === 0 && 'No change versus the prior month.'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Year-over-year growth */}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Year-over-year growth
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Most recent full year vs the prior full year.
-              </Typography>
-
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 2 }}>
-                <Typography variant="h4">{yoyGrowthText}</Typography>
-              </Box>
-
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <Typography variant="body2" color="text.secondary">
-                {yearOverYearPositive && 'Expenses grew year-on-year.'}
-                {!yearOverYearPositive && yearOverYear != null && 'Expenses fell year-on-year.'}
-                {yearOverYear == null && 'Not enough history to compare years yet.'}
+                vs {priorMonth}
               </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Category mix — rank list */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Category mix — latest full year
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{ color: expenseTrendColor(latestMonthDelta), fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatCurrencyWithSign(latestMonthDelta, currency)}
               </Typography>
+            </Box>
 
-              {categoryRows.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No expenses recorded yet for the latest full year.
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Month-over-month
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {momPct != null && momPct !== 0 &&
+                  (momPct > 0 ? (
+                    <TrendingUpIcon sx={{ fontSize: 18, color: 'error.main' }} />
+                  ) : (
+                    <TrendingDownIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                  ))}
+                <Typography
+                  variant="body1"
+                  fontWeight={600}
+                  sx={{ color: expenseTrendColor(momPct), fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {momGrowthText}
                 </Typography>
-              ) : (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Category</TableCell>
-                        <TableCell align="right">Amount</TableCell>
-                        <TableCell align="right">Share</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {categoryRows.map((row) => (
-                        <TableRow key={row.category} hover>
-                          <TableCell>{row.category}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.amount, currency)}</TableCell>
-                          <TableCell align="right">{row.pctText}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Roll-up stats */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Roll-up stats
-              </Typography>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Average monthly spend (reported window)
-                  </Typography>
-                  <Typography variant="h6">{formatCurrency(avgMonthly, currency)}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Biggest spending category (latest full year)
-                  </Typography>
-                  <Typography variant="body1">{biggestText}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Active months in report window
-                  </Typography>
-                  <Typography variant="body1">{activeMonths} months</Typography>
-                </Box>
               </Box>
+            </Box>
 
-              <Button variant="outlined" size="small" onClick={onRefresh} sx={{ mt: 2 }}>
-                Refresh analytics
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              {momExplanation}
+            </Typography>
+          </CardContent>
+        </Card>
       </Grid>
-    </Box>
+
+      {/* Year-over-year growth */}
+      <Grid item xs={12} md={6}>
+        <Card sx={{ height: '100%' }}>
+          <CardContent>
+            <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
+              Year-over-year growth
+            </Typography>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              {yoyPct != null && yoyPct !== 0 &&
+                (yoyPct > 0 ? (
+                  <TrendingUpIcon sx={{ fontSize: 28, color: 'error.main' }} />
+                ) : (
+                  <TrendingDownIcon sx={{ fontSize: 28, color: 'success.main' }} />
+                ))}
+              <Typography
+                variant="h4"
+                sx={{ color: expenseTrendColor(yoyPct), fontVariantNumeric: 'tabular-nums' }}
+              >
+                {yoyGrowthText}
+              </Typography>
+            </Box>
+
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Most recent full year vs the prior full year.
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              {yoyExplanation}
+            </Typography>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Category mix — ranked list */}
+      <Grid item xs={12} md={6}>
+        <Card sx={{ height: '100%' }}>
+          <CardContent>
+            <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
+              Category mix — latest full year
+            </Typography>
+
+            {categoryRows.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                No expenses recorded yet for the latest full year.
+              </Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Category</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Share</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {categoryRows.map((row, index) => (
+                      <TableRow key={row.category} hover>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 9,
+                                height: 9,
+                                borderRadius: '50%',
+                                backgroundColor: seriesColor(index),
+                                flexShrink: 0,
+                              }}
+                            />
+                            <Typography variant="body2">{row.category}</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(row.amount, currency)}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {row.pctText}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Roll-up stats */}
+      <Grid item xs={12} md={6}>
+        <Card sx={{ height: '100%' }}>
+          <CardContent>
+            <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
+              Roll-up stats
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Average monthly spend
+                </Typography>
+                <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {formatCurrency(avgMonthly, currency)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Biggest spending category
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  {biggestText}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Active months in the reported window
+                </Typography>
+                <Typography variant="body1" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {activeMonths} months
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 };
 

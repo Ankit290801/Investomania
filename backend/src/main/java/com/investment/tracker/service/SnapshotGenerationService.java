@@ -122,9 +122,13 @@ public class SnapshotGenerationService {
                 .estimatedCount(estimatedCount)
                 .build();
 
-        // Upsert: delete old snapshot for same date if exists
-        snapshotRepository.findByUserIdAndSnapshotDate(userId, date)
-                .ifPresent(old -> snapshotRepository.delete(old));
+        // Upsert: bulk delete the old snapshot for the same date if it exists.
+        // Must be an immediate JPQL delete, NOT find + entity-delete + save: the
+        // (user_id, snapshot_date) unique index is re-checked per statement, and
+        // Hibernate queues INSERTs before deferred DELETEs within one flush —
+        // so an entity delete followed by save() re-inserted before the DELETE
+        // executed and violated the index (observed live on force=true).
+        snapshotRepository.deleteByUserIdAndSnapshotDateBulk(userId, date);
 
         return snapshotRepository.save(snapshot);
     }
@@ -363,9 +367,9 @@ public class SnapshotGenerationService {
      */
     private void saveAssetValuation(Investment investment, LocalDate date,
                                     AssetValuationResult result) {
-        // Remove old record for same investment + date
-        assetValuationRepository.findByInvestmentIdAndValuationDate(investment.getId(), date)
-                .ifPresent(assetValuationRepository::delete);
+        // Remove old record for same investment + date (bulk JPQL delete —
+        // flush-order safe, same rationale as the snapshot upsert above)
+        assetValuationRepository.deleteByInvestmentIdAndValuationDateBulk(investment.getId(), date);
 
         AssetValuation av = AssetValuation.builder()
                 .investmentId(investment.getId())

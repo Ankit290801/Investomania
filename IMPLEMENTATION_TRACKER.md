@@ -3,12 +3,11 @@
 **Project Start Date**: May 6, 2026
 **Last Restructured**: October 2, 2026
 
-**Current Phase**: Phase 10 — JWT Authentication Upgrade (next; Phases 1–7 and 9 complete, Phase 8 deferred)
-**Overall Status**: Core MVP Complete ✅ | All six backlog features (F1–F6) Complete ✅ | 7 of 16 registered enhancements Done (E7 plan complete, 8 open)
+**Current Phase**: Phase 10 — JWT Authentication Upgrade (next; Phases 1–7 and 9 complete, Phase 8 deferred)  **Overall Status**: Core MVP Complete ✅ | All six backlog features (F1–F6) Complete ✅ | 10 of 19 registered enhancements Done (E7 plan complete; E20 7-year mock dataset added and verified October 4; E17–E19 documentation suite registered October 3)
 
 **Where to look**
 - **Phases & milestones** — Part I & II below (done and pending, in build order)
-- **Enhancements** — Appendix B (live register E1–E16 + original stakeholder set; summary table at the top)
+- **Enhancements** — Appendix B (live register E1–E19 + original stakeholder set; summary table at the top)
 - **Bugs** — Appendix C (every bug-fix record; summary table at the top)
 - **Unscheduled ideas** — Appendix D (parked plans, no committed timeline)
 
@@ -2534,15 +2533,21 @@ retrospectively consistent.
 
 ---
 
-# Appendix B: Enhancements
-
-**Summary (October 2, 2026)**: **7 of 16 registered enhancements done**; E7's plan is complete awaiting execution; 8 open (E4 superseded in scope by E12; E13–E16 gated on elaboration).
+# Appendix B: Enhancements  **Summary (October 4, 2026)**: **10 of 19 registered enhancements done**; E20 (7-year multi-asset mock dataset for the `ankit` account) added and verified; E7's plan is complete awaiting execution; E17–E19 (documentation suite) newly registered October 3; 5 open (E4 superseded in scope by E12; E15–E16 still gated on elaboration).
 
 **Committed work (October 2, 2026) — records added for this session:**
 - **E1/E2 (UI + logging)**: fixed the truncated MUI import (`FormControl` etc.) in `frontend/src/pages/ExpensesPage.jsx` (restored `FormControl`, `InputLabel`, `Select`, `MenuItem` + the icons used by the page), reversed the `[AppInfo]`/`@SuppressWarnings` hijack of the system-out logger with a dedicated appender, and replaced the deprecated `apple-mobile-web-app-capable` meta with `mobile-web-app-capable` in `frontend/index.html`.
 - **E14 (Expense analytics UI)**: `ExpenseAnalyticsPanels` rendering complete + `expenseService.getAnalytics`/`getCategoryMix`; `mvn test` 57/57 green; frontend `vite build` green (only the pre-existing >500KB chunk warning remains).
 - **E1 listing engine (FIML)**: config-driven investment-list defaults (EQUITY/CRYPTO from `investment-rules.yml`) with per-investment `listed`/`listedAt` audit fields; audit streams (`investment.list@`, `investment.list.offer@`) and revision propagation in `InvestmentListingService`/`InvestmentListingRepository`/`Investment`; matches the backend FIML package spec.
 - **Repo cleanups**: Java 21 build/profile fixes, removed analytics-service duplication, `.gitignore` updates.
+
+**Logged for fixing (October 3, 2026) — E14 polish, 4 issues (first-use review of the delivered screen):**
+1. **Placement** — analytics cards render at the bottom of the Expenses page; they belong **at the top, above the expenses table** (same shape as the Equity screen under Investments).
+2. **Design** — the panels don't follow the app's design language: they use the MUI v6+ `Grid size={{...}}` API (the app is on MUI v5 `^5.15.20`, so the cards collapse into a gapless stack), `h6`/`subtitle2` headings instead of the app's `overline` card headings, and no `tabular-nums` on figures.
+3. **Live refresh** — analytics stay stale after add/edit/delete because only the expense list is refetched; the manual **"Refresh Analytics"** button must be removed and every mutation must refresh analytics automatically.
+4. **Coverage ↔ mapping** — the dashboard "Expense Coverage" card never reads `ExpenseAssetMapping`, so mapping/remapping/unmapping an expense cannot change it. Coverage must be driven by the declared mappings.
+
+Full symptom/root-cause/fix records: Appendix C → *E14 Expense Analytics Polish (October 3, 2026)*.
 
 | ID | Enhancement | Status |
 |----|-------------|--------|
@@ -2558,10 +2563,15 @@ retrospectively consistent.
 | E10 | Expenses Deduct from the Cash Component | 🟢 Done (Sep 30) |
 | E11 | Settings Navigation Resets Theme | 🟢 Done (Sep 30) |
 | E12 | Fix PDF Import with Real User-Supplied Files | ⚪ Not Started (waiting on user's files) |
-| E13 | Inflation-Adjusted Portfolio Growth, per Fiscal | ⚪ Not Started (needs elaboration) |
-| E14 | Expense Analytics — Averages, Growth, Income Coverage | 🟢 Done (October 2) |
+| E13 | Inflation-Adjusted Portfolio Growth, per Fiscal | 🟢 Done (October 3) |
+| E14 | Expense Analytics — Averages, Growth, Income Coverage | 🟢 Done (October 2; polished October 3) |
 | E15 | Portfolio Health Check & RRG Diversification Advice | ⚪ Not Started (needs elaboration) |
-| E16 | Tax Filing Summary Generation | ⚪ Not Started (needs elaboration) |**Gate**: E13–E16 require elaboration with the stakeholder before implementation, except E14 which is now done (October 2, 2026) and E15 which I picked a default for (documented below).
+| E16 | Tax Filing Summary Generation | ⚪ Not Started (needs elaboration) |
+| E17 | Complete API Specification & OpenAPI 3.2 Docs | ⚪ Not Started (registered October 3, 2026) |
+| E18 | Architectural Specification & Module Flow Diagram | ⚪ Not Started (registered October 3, 2026) |
+| E19 | LLM-Ready Engineering Handbook (fool-proof implementation brief) | ⚪ Not Started (registered October 3, 2026; plan-first) |
+
+**Gate**: E13–E16 required elaboration with the stakeholder before implementation; E14 is done (October 2, 2026), E13 was elaborated with the stakeholder and done (October 3, 2026), E15 has a documented default, E16 remains gated. E17–E19 (registered October 3, 2026) carry their own open questions in their records — confirm scope with the stakeholder before starting; E19 is plan-first by design.
 
 Also collected in this appendix:
 - **Backlog F1–F6** (September 22, 2026) — all six feature requests implemented on
@@ -3654,22 +3664,109 @@ actual documents.
   movement).
 - Golden-sample tests pass in the build; malformed/unrecognised PDFs
   produce a clear error, never a partial silent import.
-- Tracker E4 closed together with E12 (E4's success metric met).
-
-### E13. Inflation-Adjusted Portfolio Growth, per Fiscal — ⚪ Not Started (registered September 30; scope agreed October 2: nominal + real growth + realized FY XIRR)
+- Tracker E4 closed together with E12 (E4's success metric met).  ### E13. Inflation-Adjusted Portfolio Growth, per Fiscal — 🟢 Done (elaborated with stakeholder and implemented October 3, 2026; answers recorded before code)
+  ### E20. 7-Year Multi-Asset Mock Dataset for ankit — 🟢 Done (generated + loaded + verified October 4, 2026)
 **Stakeholder context**: "Inflation adjusted portfolio growth of every
-fiscal." (Detailed elaboration pending from stakeholder — REQUIRED before
-implementing.)
+fiscal."
 
-Sketch (to be confirmed): show real (inflation-deflated) portfolio growth
-per fiscal year alongside nominal growth, so gains are read in purchasing-
-power terms. Open questions for elaboration: which inflation series and
-granularity (India CPI-C monthly from a bundled table vs an API; base
-year), deflation point (fiscal-end values to today's rupees, or to the FY
-start), interaction with the existing FY-end snapshot series (retrospective
-recalc when the table updates), display surface (new toggle on the growth
-chart vs a separate panel; per-FY table), and whether XIRR-style real
-return percentages are wanted per fiscal.
+**Agreed scope (stakeholder answers, October 3, 2026)**:
+1. **Inflation source — bundled table + optional API refresh.** The monthly
+   All-India CPI index ships as a bundled backend resource so the app works
+   offline and deterministically; a refresh path attempts to extend it from a
+   public mirror (DBnomics OECD MEI `IND.CPALTT01`) and silently keeps the
+   bundled table when offline/unavailable. Series note: MoSPI rebased CPI to
+   2024=100 in the 2026 transition and does not expose the official 2012=100
+   monthly table as a plain machine-readable series, so the bundled table is
+   transcribed from the OECD MEI monthly index for India (OECD's MoSPI-sourced
+   digitization, index 2015=100, cross-checked against the same publisher's
+   Y-o-Y growth series; it runs ~0.5%/yr above CPI-C). The table ends
+   December 2023; months beyond it are extrapolated at the RBI 4% inflation-
+   target midpoint and are explicitly labelled as an assumption in the UI.
+   Ratios are base-invariant, so the index base does not affect results.
+2. **Deflation point — FY-end values restated to today's rupees.** Each
+   FY-end portfolio value × (latest CPI ÷ that month's CPI); the whole
+   series becomes comparable in current purchasing power and FY-over-FY
+   real growth falls out of the same series.
+3. **Display — toggle on the existing growth chart + per-FY table.**
+   Nominal/Real switch in `GrowthChartCard` beside the 1Y/3Y/5Y/ALL buttons;
+   below the chart, a per-FY table: nominal value, real (today's-rupee)
+   value, Y-o-Y inflation used, real return per fiscal.
+4. **Realized-FY XIRR (from the October 2 scope) — included.** Per fiscal
+   year: opening position (FY start) as initial outflow, BUYS as outflows,
+   SELL/DIVIDEND/INTEREST as inflows, FY-end portfolio value as terminal
+   inflow; reported both nominal and CPI-deflated, for FYs that have cash
+   flows.
+5. **Currency — real figures always computed in INR.** Portfolio values are
+   converted to INR via `ForexService` before deflation; the real series
+   displays in ₹ regardless of the dashboard currency selector (the nominal
+   view keeps following it). Non-INR CPI is out of scope.
+
+**Implementation record (October 3, 2026)**:
+- **Bundled CPI table** — `backend/src/main/resources/data/cpi-india-monthly.csv`:
+  All-India monthly CPI index 2012-01 → 2023-12 (144 months) transcribed from
+  the OECD MEI series `IND.CPALTT01.IXOB.M` (index 2015=100, the OECD's
+  MoSPI-sourced digitization; fetched via DBnomics, cross-checked against the
+  same publisher's Y-o-Y growth series — e.g. Mar-2023 YoY 5.79%). Provenance
+  and the ~0.5%/yr CPI-C offset disclosure live in the file header. Ratios are
+  base-invariant, so the 2015=100 base never affects results.
+- **Backend**:
+  - `InflationService` — loads the bundled table at startup; `getEffectiveIndex`
+    projects months beyond the table (and before its start) at the RBI 4%
+    target midpoint (always flagged, never silent); `getDeflator`/`deflate`
+    restate amounts between months; `refreshFromApi()` re-fetches the DBnomics
+    mirror and swaps the in-memory table only when the payload fully covers the
+    bundled span (never throws; offline keeps the bundled table). Configurable
+    via `inflation.refresh-url`.
+  - `RealGrowthService` — reuses `PortfolioCalculationService.calculateYoYGrowth
+    (userId, years, "INR")` for the nominal INR series (snapshot path + live
+    point + replay fallback), deflates every point to today's rupees, and builds
+    the per-FY breakdown: FY-end representative = last point ≤ 31 March
+    (incomplete current FY excluded); Mar-over-Mar CPI inflation (reported even
+    for empty portfolios); nominal and real returns vs the prior FY; realized FY
+    XIRR via ACT/365 bisection (flows: opening position at FY start,
+    BUY/CONTRIBUTION out, SELL/WITHDRAWAL/DIVIDEND/INTEREST in, FY-end valuation
+    terminal; cash-account ops and BONUS/SPLIT/MERGER excluded), reported
+    nominal + CPI-deflated. Zero-signal FY rows (no value, no prior value, no
+    flows) are suppressed. `GET /api/portfolio/real-growth?years=5` returns
+    realSeries + fiscalYears + inflation metadata; currency always "INR".
+  - DTOs: `RealGrowthMetricsDTO`, `RealGrowthPointDTO`, `FiscalRealBreakdownDTO`,
+    `InflationMetaDTO`.
+  - Tests: `InflationServiceTest` (11) — table load, deflator math, +4% tail
+    (exactly 1.04 across a table-boundary year), back-projection, refresh
+    swap/failure/partial-coverage, CSV parsing. `RealGrowthServiceTest` (6) —
+    deterministic deflation (expected values hand-computed from the bundled
+    index), FY breakdown (5.79% inflation, +12.50% nominal → +6.34% real), XIRR
+    sign-change rules + an exact 10% known case, FY-label convention. Two
+    test-found bugs fixed: back-projection exponent sign; refresh URL fallback
+    outside a Spring context.
+- **Frontend** — `analyticsService.getRealGrowthMetrics(years)`;
+  `DashboardPage` fetches real growth once alongside the nominal fetch (INR-only,
+  deliberately not keyed on the currency selector) and passes `realData` down;
+  `GrowthChartCard` gains a Nominal/Real toggle beside the 1Y/3Y/5Y/ALL group
+  (Real disabled while real data is unavailable): real mode renders the deflated
+  series (secondary theme colour, ₹ formatting, "Real CAGR" stat) and — in both
+  views — the "Real growth by fiscal year" table (nominal ₹, real today's-₹,
+  Y-o-Y inflation, real return, realized FY XIRR with semantic colours and
+  tabular numerals) plus a source caption and, when active, the labelled
+  "assumes 4.0%/yr beyond Dec 2023" clause.
+- **Checks** — backend `mvn test` **78/78** (61 pre-existing + 17 new); frontend
+  `node scripts/e2-check.cjs` OK: 85 files, `node scripts/color-lint.cjs` OK,
+  `npx vite build` green (only the pre-existing >500KB chunk warning). Live
+  spot-check on the running :8080/:5173: `/api/portfolio/real-growth` returns 200
+  with the documented shape (deflator 1.1707 for Oct-2022 → today ≈ 4%/yr
+  compounded, extrapolation flags correct, `fiscalYears` suppressed for the empty
+  dev portfolio); dashboard renders both toggle states with no console errors.
+  The dev DB holds no investments, so the full-data UI path remains to be
+  eyeballed against real snapshots (empty-state behaviour verified instead).
+- **Known limitations (documented, by design)**: (1) the official CPI tail past
+  Dec 2023 is the labelled 4% assumption until a machine-readable continuation
+  exists — the API refresh replaces it automatically if the mirror gains newer
+  months; (2) the OECD series runs ~0.5%/yr above CPI-C (disclosed in UI + CSV
+  header); (3) XIRR for the earliest FY needs a strictly-prior portfolio point
+  (else no opening flow → null); (4) the forex duplicate-key crash that disabled the
+  real/nominal growth views on accounts with non-INR transactions was found during
+  stakeholder verification and is fixed + logged separately — Appendix C →
+  *Real/Nominal Growth Disabled — Currency-Rate Duplicate-Key Crash (October 4, 2026)*.
 
 ### E14. Expense Analytics — Averages, Growth, Income Coverage — 🟢 Done (October 2, 2026)
 
@@ -3716,6 +3813,8 @@ for the averages, rolling-average window length, where this surfaces
 (Expenses page analytics section vs a new Analytics screen), and whether
 budgets/targets should be introduced as part of this.
 
+**E14 polish (October 3, 2026)** — first-use review produced four corrections, all logged (Appendix C → *E14 Expense Analytics Polish*) before code was touched: (1) panels moved **above** the expense table (Equity-screen shape: cards → table); (2) panels restyled to the app's F1 card conventions (overline headings, tabular numerals, theme tokens, and MUI v5 `item` + `xs/sm/md` grid cells — the original `size={{...}}` prop is a v6 API the installed v5 Grid ignores, which is why the cards stacked with no spacing); (3) one `refreshAll()` path now refetches list + analytics after every create/update/delete/mapping change and on import, and the manual "Refresh Analytics" button is removed; (4) the dashboard "Expense Coverage" card is now driven by `ExpenseAssetMapping` — `coveragePercentage = Σ(expense × mapped%) ÷ Σ(expenses)` with `totalCoveredExpenses` added to `ExpenseCoverageDTO`; investment income stays on the card as context, not as the numerator.
+
 ### E15. Portfolio Health Check & RRG-Based Diversification Advice — ⚪ Not Started (registered September 30; scope pending — best judgment below)
 **Stakeholder context**: "Implement portfolio health check, suggest sector
 diversification, etc. using RRG." (Detailed elaboration pending from
@@ -3753,6 +3852,63 @@ AY labelling with Indian tax-slab references is needed.
 > with the stakeholder before implementation begins** — ask for the open
 > questions above (and any others) and record the answers in the item's
 > section before writing code.
+
+### E17. Complete API Specification & OpenAPI 3.2 Docs — ⚪ Not Started (registered October 3, 2026)
+**Stakeholder context**: "Create complete API spec document and OpenAPI 3.2
+docs."
+
+Sketch: a version-controlled OpenAPI 3.2 specification covering every REST
+surface (Auth, Expense, Investment, MarketData, Portfolio including the new
+`/real-growth`, Snapshot, Symbol, Transaction, Settings) with consistent
+error-envelope, auth (session-cookie) and payload conventions, plus a rendered
+docs surface (Swagger UI / Redoc) and a human-readable API reference derived
+from it. Practical note: the backend is Spring Boot 2.7 where the springdoc
+1.x line targets OpenAPI 3.0–3.1, so faithful 3.2 output likely means a
+hand-maintained spec file (validated in CI) or a Boot-3/springdoc-v2+
+upgrade as a prerequisite. Open questions: hand-authored spec as source of
+truth vs code annotations (drift control), spec-first vs code-first workflow,
+whether Swagger UI is exposed only in dev, example payloads, and a CI
+validation step for the spec.
+
+### E18. Architectural Specification & Module Flow Diagram — ⚪ Not Started (registered October 3, 2026)
+**Stakeholder context**: "Create complete architectural spec doc and module
+flow diagram of the complete functionalities of the framework."
+
+Sketch: a living architecture document — system context (React/MUI SPA ↔
+Spring Boot API ↔ H2/PostgreSQL + external services for forex, market data
+and symbol resolution), the module map (controllers → services →
+repositories, config runners/schedulers, security), an entity-relationship
+overview, and the key end-to-end flows as Mermaid diagrams (auth/session,
+expense → mapping → coverage (E14), transaction → position recalculation,
+snapshot generation + backfill, real-growth deflation (E13), bond coupon
+scheduling, statement-import pipelines), plus deployment topology and
+cross-cutting conventions (F1 design language, currency handling, audit
+patterns). Open questions: C4 depth (context/container/component), one doc
+vs per-module docs, Mermaid vs drawn diagrams, and the refresh discipline
+(updated with each enhancement?).
+
+### E19. LLM-Ready Engineering Handbook (Fool-Proof Implementation Brief) — ⚪ Not Started (registered October 3, 2026; plan-first)
+**Stakeholder context**: "Add an item for any necessary doc required in the
+future that can be a fool-proof document to feed to an LLM to implement new
+features or do major enhancements."
+
+Sketch: a single self-contained brief (or curated bundle under `docs/`)
+designed so an LLM agent can implement a new feature or major enhancement
+correctly on the first pass: stack + pinned versions and known gotchas (MUI
+v5 Grid `item`+`xs` vs the ignored v6 `size` prop, Yup `''`→NaN transform
+for numbers, no ESLint config so `npm run lint` must never be relied on,
+ripgrep unavailable in the working environment, `vite build` rewrites
+tracked `frontend/dist/*`, `@Transactional(readOnly = true)` service
+conventions, BaseService/BaseController patterns, the forex-first currency
+rule); the F1 design-language rules; the canonical verification commands
+(e2-check, color-lint, vite build, mvn test) and their expected outputs;
+the tracker process gates (elaborate-before-code, Appendix C bug logging);
+and worked reference implementations of past features (e.g. E13 real
+growth) as gold-standard examples. E17 + E18 become this handbook's
+factual source; the handbook is the drift-controlled summary an LLM
+consumes. Open questions: single file vs `docs/` bundle, refresh trigger
+(every merged enhancement?), drift checks (checklist + verification step),
+and per-task-type playbooks (new feature vs bug fix vs enhancement).
 
 ---
 
@@ -4344,8 +4500,11 @@ This is marked **CRITICAL** because without proper income attribution:
 
 # Appendix C: Bug Fixes & Audits
 
-**Summary (October 2, 2026)**: All recorded bug batches are closed. Every section
-below is 🟢 complete unless a status marker inside says otherwise.
+**Summary (October 4, 2026)**: All recorded bug batches are closed. The October 3
+batches (E14 polish; Add-Transaction quantity/price validation) and the October 4
+currency-rate upsert crash (real/nominal growth disabled) were logged here first and
+are fixed and verified; full records below. Every section below is 🟢 complete unless
+a status marker inside says otherwise.
 
 | Record | Scope | Status |
 |--------|-------|--------|
@@ -4356,18 +4515,201 @@ below is 🟢 complete unless a status marker inside says otherwise.
 | DB Schema ↔ Entity/DTO Audit (September 22, 2026) | Unused/outdated/misnamed columns | 🟢 Complete |
 | Backup/Restore Restore Failure (October 2, 2026) | Restore reported "not a valid backup JSON"; real cause: Hibernate flush-order unique-index violation + silent ID loss on IDENTITY re-insert + missing ExpenseAssetMappings. Fixed with bulk JPQL wipes, old→new ID remapping, extended envelope; live round-trip ×2. Full record: Phase 9 task 8.4 | 🟢 Complete |
 | E2 — Expense mapping dropdown empty / "Failed to load data" (October 2, 2026) | **Symptom**: `ExpenseMappingDialog` dropdown for investments showed nothing and reported "Failed to load data". **Root cause**: frontend `investmentService.js` defined `getAll()` but not `getAllInvestments()`, while `ExpenseMappingDialog` called the latter (54); backend `InvestmentController` did implement `GET /api/investments → getAllInvestments`, so the dropdown was left empty rather than crashing. Fix: add `getAllInvestments()` to `investmentService.js` pointing at `/api/investments`; `e2-check.cjs` all 85 files import/defined, `vite build` green, `mvn test` 57/57 green. | 🟢 Complete |
+| E14 Expense Analytics Polish (October 3, 2026) | 4 issues on the delivered E14 screen: cards at the bottom instead of above the table; off-design panels (MUI v5 Grid given the v6 `size` API, non-standard headings, no tabular numerals); stale analytics after expense mutations + manual "Refresh Analytics" button; dashboard "Expense Coverage" ignored `ExpenseAssetMapping` entirely. Full record below. | 🟢 Complete |
+| Add-Transaction quantity/price wrongly mandatory (October 3, 2026) | **Symptom**: in the Add Transaction form, INTEREST/DIVIDEND (and other non-trade) transactions where quantity/price never apply could not be submitted. **Root cause**: fields rendered off the *investment* type only; the Yup schema had no empty-string handling, so `yup.number()` cast the blank default `''` to `NaN` and rejected it as "must be a `number` type" — blocking every type whose fields were left empty or hidden (incl. FD/RD/NPS/PPF contributions). **Fix**: fields show only for BUY/SELL on EQUITY/CRYPTO/BOND and are required only there; every other type treats blank as absent; switching type away from a trade clears the hidden values. Full record below. | 🟢 Complete |
+| Real/Nominal growth disabled — currency-rate duplicate-key crash (October 4, 2026) | **Symptom**: dashboard Nominal/Real growth toggle disabled for the `ankit` account; backend log showed H2 23505 on `uk_currency_pair` from a blind `save()` in `ForexService.getExchangeRate` whenever a cached rate expired and a row already existed. **Root cause**: blind INSERT on refresh + the inner DB failure poisoned the outer `@Transactional` request (rollback-only → `UnexpectedRollbackException` despite the catch-all fallback). **Fix**: idempotent H2 `MERGE … KEY` upsert (explicit column list) in `REQUIRES_NEW`, dead re-read removed, defensive `toInr` fallback; 4 new regression tests; 82/82 green; live-verified as `ankit` (both endpoints 200, toggle enabled). Full record below. | 🟢 Complete |
 
 The full dated records follow, in their original detail.
 
 ---
 
+## Real/Nominal Growth Disabled — Currency-Rate Duplicate-Key Crash (October 4, 2026) — 🟢 Complete
+
+**Symptom**: reported by the stakeholder against the `ankit` account: "The real value
+button is disabled due to errors for real and nominal growth." On the dashboard the
+Portfolio Growth card's Nominal/Real toggle rendered disabled (`GrowthChartCard`
+disables **Real** while `realSeries.length === 0`), and the backend log showed repeated
+`org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException: Unique index or primary key
+violation: "UK_CURRENCY_PAIR_INDEX_B ON PUBLIC.CURRENCY_RATES(FROM_CURRENCY,
+TO_CURRENCY) VALUES ('USD', 'INR')"` (H2 error 23505) at
+`ForexService.getExchangeRate` → `convert` → `RealGrowthService.toInr`, followed by
+`Using expired cached rate as fallback: USD -> INR = 95.810000` — yet the request
+still failed with HTTP 500.
+
+**Why only `ankit`**: the account holds real non-INR transactions (USD buys), so the
+growth/real-growth paths actually invoke the forex converter; the `admin` demo DB is
+empty and never reaches this code.
+
+**Root cause** (two layered faults):
+1. **Blind INSERT on cache refresh**: when the 24-hour cache expired,
+   `ForexService.getExchangeRate` fetched a fresh rate from the API and called
+   `currencyRateRepository.save(new CurrencyRate(...))` without checking for an
+   existing row for the same `(from_currency, to_currency)` pair. The
+   `uk_currency_pair` unique constraint rejected the INSERT with 23505. The code did
+   catch the exception and fall back to the expired cached rate — but that was not
+   enough, because of (2).
+2. **Poisoned outer transaction**: the failure occurred inside the `@Transactional`
+   real-growth request. The inner repository write shared the caller's transaction,
+   so the exception marked it **rollback-only**; the catch-all swallowed the error,
+   the request "successfully" degraded, and the outer commit then threw
+   `UnexpectedRollbackException` → HTTP 500 → `realSeries = null` → toggle disabled.
+   (This is why the original trace shows both the 23505 *and* a failing request
+   despite the fallback apparently working.)
+
+**Fix**:
+- [CurrencyRateRepository.java](backend/src/main/java/com/investment/tracker/repository/CurrencyRateRepository.java):
+  new idempotent native upsert `upsertRate(...)`: `MERGE INTO currency_rates
+  (from_currency, to_currency, rate, last_updated, source, created_at) KEY
+  (from_currency, to_currency) VALUES (...)`. H2 2.x `MERGE … KEY` replaces on key
+  collision, so a stale/duplicate row can never violate `uk_currency_pair` again.
+  Two hard-won details: (a) the **explicit column list is mandatory** — without it
+  H2 demands a value for *every* table column including the generated `id` and fails
+  with error 21002 "Column count does not match" (found live on the first attempt);
+  (b) the method is `@Transactional(propagation = REQUIRES_NEW)` so an upsert failure
+  rolls back only its own transaction and can never mark the caller's transaction
+  rollback-only — the catch-and-degrade path is now genuinely effective.
+- [ForexService.java](backend/src/main/java/com/investment/tracker/service/ForexService.java):
+  the blind `save()` is replaced by `upsertRate(...)`; the dead post-insert re-read
+  was removed (the freshly fetched rate is returned directly, saving a query per
+  refresh). The catch-all fallback (expired rate → 1.0) is unchanged.
+- [RealGrowthService.java](backend/src/main/java/com/investment/tracker/service/RealGrowthService.java):
+  `toInr` wraps conversion in try/catch and falls back to the nominal amount on any
+  forex failure, so one bad pair can no longer kill the whole series.
+- No other blind `currencyRateRepository.save(...)` callers exist (grep-verified;
+  the MarketData services convert through `ForexService`).
+
+**PostgreSQL portability (known limitation, deliberate)**: `MERGE … KEY` is H2-only
+syntax. `application-prod.yml` targets PostgreSQL, where the equivalent is
+`INSERT … ON CONFLICT (from_currency, to_currency) DO UPDATE …`. If a PostgreSQL
+profile ever goes live, `upsertRate` must gain a dialect-specific variant
+(per-dialect query or portable find-then-save). Not blocking the dev/H2 deployment
+this fix ships for.
+
+**Verification (October 4, 2026)**:
+- [ForexServiceTest.java](backend/src/test/java/com/investment/tracker/service/ForexServiceTest.java)
+  rewritten for the field-injected service (the old file called a non-existent 2-arg
+  constructor and used an `assertNoThrow` assertion that doesn't exist — it had been
+  failing `testCompile`, masking the whole suite). 4 regression tests: refresh with a
+  stale duplicate row present does not throw and returns the fresh rate; the refresh
+  goes through `upsertRate` (not a blind save); a simulated upsert failure degrades
+  to the stale cached rate; a fresh cached rate short-circuits without an upsert.
+- `mvn test`: **82/82 green** (78 prior + 4 new).
+- Live end-to-end as `ankit/ankit123` (dev backend :8080 + vite :5173 restarted):
+  `POST /api/auth/login` 200; `GET /api/portfolio/real-growth?years=5` **200** with
+  real series + per-FY breakdown (FY 24-25 / FY 25-26 real values, inflation, real
+  return, FY XIRR) and inflation metadata; `GET /api/portfolio/growth?years=5`
+  **200** (nominal recovered too — same forex path). Backend log shows the happy path
+  `Cached exchange rate: USD -> INR = 96.350000` against the very row that previously
+  triggered 23505, and **zero** occurrences of 23505 / 21002 / UnexpectedRollback /
+  ConstraintViolation after restart.
+- UI: dashboard as `ankit` — Real toggle enabled; clicking it switches the chart to
+  the real series ("Latest value (real, today's ₹) ₹6,93,886", Real CAGR) and the
+  "Real growth by fiscal year" table renders with the CPI source/assumption captions.
+
 ---
 
-## Post-Phase 6: Bug Fixes & Enhancements (May 11, 2026)
+## Add-Transaction Quantity/Price Validation (October 3, 2026) — 🟢 Complete
 
-**Status**: 🟢 Complete
-**Date**: May 11, 2026
-**Focus**: Production Readiness & User Testing
+**Symptom**: on the Add Transaction screen, a *bond interest* or *dividend* transaction — where price and quantity can never be present — was still effectively mandatory: the form would not submit unless the Quantity and Price fields were filled.
+
+**Root cause** ([TransactionForm.jsx](frontend/src/components/transactions/TransactionForm.jsx)):
+1. `showQuantityPrice` was derived from the **investment** type only (`['EQUITY', 'CRYPTO', 'BOND']`), so the Quantity/Price inputs rendered for *every* transaction type on those investments — including `INTEREST`, `DIVIDEND` and `WITHDRAWAL`.
+2. The Yup schema declared `quantity: yup.number().positive(...)` and `price: yup.number().positive(...)` with no empty-string handling. React Hook Form's default value is `''`, and `yup.number()` casts `''` to `NaN`, so a blank field failed with "quantity must be a `number` type, but the final value was: `NaN`" — not the silent "not required" the code intended. Because unmounted Controller fields retain their defaults, this also blocked every submission whose fields are hidden altogether: FD/RD/NPS/PPF `CONTRIBUTION`/`INTEREST`/`WITHDRAWAL` and all other investment types that never render the pair.
+
+**Fix**:
+- Fields now show only when the **transaction** type is `BUY`/`SELL` **and** the investment is `EQUITY`/`CRYPTO`/`BOND` (the genuinely trade-shaped flows).
+- The schema is built per investment capability (`useMemo`) and uses `yup.when('type', …)`: Quantity/Price are `required` + `positive` for those trades only, and an *optional positive number* everywhere else. An `emptyToUndefined` transform makes `''`/null mean "absent", so blank hidden fields can never fail validation again.
+- Switching away from a trade type clears the hidden Quantity/Price values, so a stale quantity can never be submitted on an INTEREST/DIVIDEND row.
+- Trades keep requiring the pair deliberately: `TransactionService.updateEquityCalculations`/`updateCryptoCalculations` sum `txn.getQuantity()` for BUY/SELL without null guards, so amount-only equity trades would 500 on the next recalculation.
+- The Amount field now reports "Amount is required" for an empty value instead of a number-cast error.
+
+**Verification (October 3, 2026)**:
+- `node scripts/e2-check.cjs` OK (85 files); `node scripts/color-lint.cjs` OK; `npx vite build` green (only the pre-existing >500 KB chunk warning).
+- Yup schema scenarios executed with Node against the exact new expressions (9 cases): BOND `INTEREST` / `WITHDRAWAL`, EQUITY `DIVIDEND` and FD `CONTRIBUTION` with blank quantity/price are **accepted**; BOND `BUY` with blank quantity/price is **rejected** with "Quantity is required; Price is required"; a filled BUY passes; negative quantity and empty amount are rejected ("Amount is required" instead of the old number-cast error).
+- Live smoke: the Transactions page loads through the dev server with the modified module hot-reloaded and no console errors.
+- **Not exercised end-to-end**: the dev database has no investments for the `admin` or `demo` accounts, so the transaction dialog (which needs an investment to open) could not be clicked through; no data was seeded, to avoid writing to the user's database.
+
+---
+
+## E14 Expense Analytics Polish (October 3, 2026) — 🟢 Complete
+
+**Trigger**: first-use review of the delivered E14 screen (October 2). Four issues reported by the stakeholder and logged here before any code was changed.
+
+### 1. Analytics cards were at the bottom of the page — now above the table 🟢
+**Symptom**: the analytics cards sat *after* the expense table, touching each other with no spacing ("bound together at the end of the page").
+**Root cause**: two compounding issues in [ExpensesPage.jsx](frontend/src/pages/ExpensesPage.jsx): (a) `<ExpenseAnalyticsPanels>` was rendered after `<ExpenseList>`; and (b) the panels' `<Grid container>` children used the MUI **v6+** `size={{ xs, sm, md }}` API while the app is pinned to `@mui/material ^5.15.20`, where a grid cell must be `<Grid item xs=… sm=… md=…>`. Without `item`, the children never receive item width/`padding`, so every card rendered full-width in a gapless stack.
+**Fix**: panels moved above `<ExpenseList>` (matching the Equity screen layout: summary cards → table); all four cells converted to `item` + `xs/sm/md`.
+
+### 2. Panels didn't follow the app design language 🟢
+**Symptom**: the panels read as bolted-on — a different heading idiom, no tabular figures, no alignment with the F1 card design used across the app.
+**Root cause**: E14 shipped with `variant="h6"`/`subtitle2` headings and default numeric typography instead of the shared F1 card conventions.
+**Fix**: every card now uses the app's overline heading (`variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}`), figures use `fontVariantNumeric: 'tabular-nums'`, delta/label rows reuse the stat-row pattern from [ExpenseCoverageCard.jsx](frontend/src/components/expenses/ExpenseCoverageCard.jsx), and the category-mix rows use the `seriesColor()` dots from [chartHelpers.js](frontend/src/utils/chartHelpers.js) (same visual as the Expense-by-Category legend). Colours stay theme-token based (color-lint clean).
+
+### 3. Analytics were stale after every mutation; manual refresh button removed 🟢
+**Symptom**: add/edit/delete an expense — the table updates but the analytics numbers don't; a manual "Refresh analytics" button was needed.
+**Root cause**: `handleSubmit`, `handleDelete` and `handleCloseMapping` called only `fetchExpenses()`; `getAnalytics`/`getCategoryMix` were fetched on mount, on category-filter change, and on Excel import only.
+**Fix**: one `refreshAll()` path now refetches the list + both analytics endpoints, and it is called after create, update, delete, mapping-dialog close, and import. The manual refresh button and its `onRefresh` prop were deleted.
+
+### 4. Dashboard "Expense Coverage" ignored expense→investment mappings 🟢
+**Symptom**: adding, updating or removing an `ExpenseAssetMapping` never changed the dashboard "Expense Coverage" card.
+**Root cause**: [ExpenseCoverageService.java](backend/src/main/java/com/investment/tracker/service/ExpenseCoverageService.java) computed `coveragePercentage = totalIncome (DIVIDEND/INTEREST) / totalExpenses` and never queried `ExpenseAssetMapping` (its repository wasn't even injected). The mapping feature (task 6.4 — "Mapping working, ready for coverage calculations") was never wired into task 6.5's coverage math.
+**Semantics now implemented** (product definition: "percentage of expenses covered by investment assets"; mapping entity: "percentage of expense covered by this investment"; example: rent 50% FD interest + 50% dividend income): an expense mapped at N% is N% covered by assets, so `coveragePercentage = Σ(expense × Σmapping%) / Σ(expenses)` over the requested window, with every amount currency-converted first. **Investment income stays on the card as context but is no longer the coverage numerator** — the declared mappings are the coverage.
+**Fix**: `ExpenseCoverageDTO` gains `totalCoveredExpenses`; `ExpenseCoverageService.calculateCoverage` loads the user's mappings (`ExpenseAssetMappingRepository.findAllForUser`), sums each in-range expense's mapped portion (percentage-capped at 100 by the existing mapping validation), converts to the target currency and derives the percentage; [ExpenseCoverageCard.jsx](frontend/src/components/expenses/ExpenseCoverageCard.jsx) shows Total Expenses / Covered by Mappings / Investment Income with "Fully/Partially Covered" and the progress bar driven by mapped coverage.
+
+### Verification (October 3, 2026)
+- **Backend**: `mvn test` — **61 tests green** (57 existing + 4 new `ExpenseCoverageServiceTest` cases: unmapped expenses give zero coverage even when income exists; mappings drive `coveragePercentage`; mapping totals above 100% are capped; covered amounts are currency-converted before summing).
+- **Frontend**: `node scripts/e2-check.cjs` OK (85 files, all JSX identifiers imported/defined); `node scripts/color-lint.cjs` OK (no raw colour literals); `npx vite build` green (only the pre-existing >500KB chunk warning).
+- **Live read-only spot-check** (running dev backend on :8080 + dev server on :5173, admin session): `GET /api/expenses/coverage` now returns `totalCoveredExpenses`; the dashboard renders the new "Covered by Mappings" row; the Expenses screen shows the 2×2 analytics cards **above** the table with overline headings and no refresh button; `/api/expenses/analytics` + `/api/expenses/category-mix` still 200; browser console has no React/Grid warnings (the old `size` prop warning is gone).
+- **Not covered live**: the dev DB currently holds no expenses, so the mutation→auto-refresh flow and mapping→coverage movement were proven at unit-test and payload level rather than with seeded live data — no writes were made to the user's database.
+
+---
+
+---
+
+## E20. 7-Year Multi-Asset Mock Dataset for ankit — 🟢 Complete (October 4, 2026)
+
+**Scope (requested October 4, 2026)**: populate the `ankit` account with a complete 7-year, multi-asset-class DML dataset so the application's behaviour can be observed end-to-end — all supported asset classes, India + US listed/unlisted equities with loss selling, and a varied expense profile (low months plus singular big one-offs).
+
+**What was built**:
+- [backend/sql/generate-mock-data.mjs](backend/sql/generate-mock-data.mjs) — deterministic (seeded PRNG, seed 20261004) dataset generator that emits [backend/sql/mock-data-7yr.sql](backend/sql/mock-data-7yr.sql). It is ADDITIVE ONLY: it re-uses the existing `ankit` cash accounts (Axis Salary ACC id 88, SBI Emergency ACC id 87) and the pre-seeded rows (investments ≤ 107, transactions ≤ 110, expenses ≤ 8) for cash-ledger balancing, and assigns new identity rows starting at 200 / 1000 / 3000.
+- Every row was designed against the actual entity model read from source: the SINGLE_TABLE inheritance discriminator column, per-type subclass columns (Equity/Crypto: symbol/quantity/purchase_price/market-or-exchange; Bond: issuer/face_value/coupon_rate/maturity/coupon_frequency=NULL so the BondCouponScheduler never duplicates; FD/RD: principal/interest_rate/tenure/maturity; NPS/PPF: account_number/contribution_frequency/total_contributed; RealEstate: property_type/location/purchase_price; Cash: bank_name/account_type/ifsc/routing/interest_rate/notes), and Transaction with quantity/price only where they apply (BUY/SELL on EQUITY/CRYPTO), plus the E10 `expense_id` backlink on EXPENSE transactions.
+- Cash-account `current_value` is NOT hand-picked: the generator mirrors `CashLedgerService.replayBalance` semantics (oldest DEPOSIT/interest seeds the balance; DEPOSIT/SALARY/INTEREST credit; WITHDRAWAL/EXPENSE/TRANSFER_OUT debit; the balance is guarded non-negative and the sweep is both surplus-driven and balance-proportional so idle cash stays ~1.5–2.5L). The generator books the ACCOUNT-existing deposits (Axis ₹3,00,774.34 + EXPENSE ₹7,000; SBI ₹2,95,598) into the ledger so the final `UPDATE investments SET current_value = …` writes match the app's own replay. The two EMI-financed one-offs (car ₹9,40,000; kitchen ₹2,10,000) were deliberately left unlinked — they are legacy-style expense rows that touch no cash balance.
+
+**Dataset contents **(additive to ankit):
+- **26 new investments** across all 9 types: EQUITY×12 (India listed NSE: Reliance, TCS, Tata Motors, Yes Bank, HDFC Bank, Nippon India Gold BeES ETF; India unlisted: Zerodha, NSE, OYO Rooms; US listed NASDAQ: Apple, Peloton, Alphabet), CRYPTO×3 (BTC, ETH, DOGE on USD custody), BOND×3 (NHAI tax-free, Tata Capital NCD, RBI Sovereign Gold Bond 2032), FD×2 (HDFC 7.10%/36m; SBI tax-saver 6.90%/5y), RD×2 (HDFC 6.80%/60m; ICICI 7.00%/36m), PPF×1 (SBI, yearly, ₹15L/yr × 7), NPS×1 (Tier-I aggressive, quarterly ₹25K × 25 quarters), REAL_ESTATE×2 (Whitefield 2BHK; Hosur Road 30×40 plot).
+- **Equity**: India listed + unlisted both covered. Loss selling present: Tata Motors (avg ₹396.67, two sells at ₹290/₹310 — net zero, fully exited at loss), Yes Bank (avg ₹36.67, one sell at ₹14 — exited at heavy loss), OYO Rooms (unlisted, avg ₹42, sold at ₹28 — loss), Peloton (USD, avg $28, sold at $8.50 — loss), DOGE (USD, bought $0.32, sold $0.09 — loss). Also partial profit trim (Apple trimmed at $190) and a full hold (Reliance, TCS, gold ETF, HDFC Bank, Zerodha, NSE, AAPL residual, GOOGL, BTC residual, ETH residual, NHAI, Tata NCD, SGB, SBI FD, ICICI RD, PPF, NPS, flat, plot).
+- **833 total transactions** after the load (863 in the live API includes the 28 pre-existing + the per-account interest/withdrawal rows I inserted in the ledger and the 2 cash-account deposits already in the DB). Type mix: SALARY×90, EXPENSE×427, CONTRIBUTION×116, WITHDRAWAL×83, INTEREST×57, BUY×55, DIVIDEND×22, DEPOSIT×5, SELL×8.
+- **430 expenses** (after load) across all 9 categories: HOUSING×86, FOOD×84, UTILITIES×84, TRANSPORT×86, ENTERTAINMENT×45, HEALTHCARE×33, INSURANCE×7, EDUCATION×3, OTHER×2. Monthly baseline is deliberately varied: COVID months 2020-04/05 are tiny (groceries ₹2,300; no entertainment; utilities ₹1,450); January healthcare bumps; 55% of months carry an entertainment spend that is otherwise off; entertainment itself turns off ~45% of months (realistic capriciousness). Singular big one-offs: emergency appendectomy ₹42,000 (Mar 2020), health-insurance annuals each Sep 2020–2025 (₹14K→₹41K), IIM Bangalore executive programme ₹1,75,000 (Jun 2023), father's cardiac surgery ₹1,10,000 (May 2021, drawn from SBI emergency fund), Japan trip ₹1,45,000 (Oct 2025), Kashmir trip ₹54,000 (Dec 2022), sister's wedding gift ₹68,000 (Feb 2022), laptop repair ₹34,000 (Oct 2023). The two largest are EMI-financed and intentionally unlinked (car ₹9,40,000 Jan 2024; modular kitchen ₹2,10,000 Nov 2024).
+- Cash accounts in their final state: Axis Salary ACC ₹10,70,996.82; SBI Emergency ACC ₹4,30,180.00 (the surgery ₹1,10,000 was funded from SBI, not Axis, so Axis stayed higher).
+
+**Integrity checks before reload**:
+- Row-level: file is pure ASCII (em-dashes sanitised to " - ") so H2 RunScript reads it correctly on Windows CP1252.
+- Count-level: the generator reported 26 investments / 428 expenses / 833 transactions.
+- Cross-level: the generator was run with a SQL self-check that every EXPENSE transaction carries a non-null `expense_id` (backlink present for all 428 expense rows).
+
+**Load + post-load verification **(backend stopped, then restarted):
+- Backup first: [data/Backup_investmentdb_before_mock7yr_2026-10-04.mv.db](backend/data/Backup_investmentdb_before_mock7yr_2026-10-04.mv.db).
+- Load via H2 RunScript: `java -cp … org.h2.tools.RunScript -url "jdbc:h2:file:./data/investmentdb;NON_KEYWORDS=VALUE,TYPE;IFEXISTS=TRUE" -user sa -script sql/mock-data-7yr.sql` — exit 0, no errors.
+- H2 Shell re-check after load (before restart): 54 investments for user 3, 863 user-3 transactions (with the 28 existing + 6 new cash-account rows), 430 expenses for user 3, 7 snapshots, 3 expenses without `paid_from_investment_id` (the two EMI one-offs + one unreproducible leftover — consistent with the design); per-type currentValue sums by H2 Shell identical to the generator's intended design; the H2 Shell replay-of-transactions SQL against investments 87/88 returned exactly the stored current values (4,30,180 / 10,70,996.82).
+- After restart, live API audit via a fresh ankit session: investments 54, transactions 863, expenses 430, snapshots 7; snapshot dates = 2020-03-31 … 2026-03-31; sum of currentValue ₹1,74,19,581.67; per-type currentValue sums match the pre-load H2 Shell check.
+
+**Behaviour observed through the app **(all as ankit, both backend :8080 + vite :5173 live):
+- Dashboard: TOTAL NET WORTH ₹1,80,96,130 (+₹62,72,371 / +53.05% vs last FY-end); Expense Coverage shows ₹6,99,592 total / ₹71,450 investment income / 0% covered (no mappings exist — expected); Segment breakdown Illiquid 70.4% / Safe 20.0% / Equity 7.3% / Crypto 2.3%; Growth chart with ALL 5 FY bars (FY 21-22 → FY 26-27) and the **Real toggle enabled** (uid is focusable, was disabled before E13); Real Growth by Fiscal Year table renders 5 rows with nominal ₹ / real (today's ₹) / inflation (YOY) / real return / FY XIRR (REAL) — e.g. FY 25-26: ₹157.8L nominal, ₹161.5L real, 4.0% inflation, +0.17% real return, +9.46% FY XIRR; expense-by-category legend shows the big one-offs (housing ₹2,80,000 / 40%, entertainment ₹1,60,420 / 23%).
+- Growth endpoint `GET /api/portfolio/growth?years=5`: 200, YoY +₹29,43,882 / +19.43%, CAGR 5.73%, 6 historical points 2022-03-31 → 2026-10-04.
+- Segment endpoint `GET /api/portfolio/segments`: 200, total ₹1,80,96,130.05; segments Crypto ₹4,13,340 / Safe ₹36,17,611.02 / Equity ₹13,23,179.03 / Illiquid ₹1,27,42,000.
+- Segment-impact endpoint `GET /api/portfolio/segment-impact`: 200, best = Safe Assets (+108.33%), worst = Crypto (-17.48%).
+- Real growth endpoint `GET /api/portfolio/real-growth?years=5`: 200, deflated series + per-FY breakdown + inflation metadata.
+- Transactions: paginated table 1–10 of 863; type filter SELL returns exactly 8 loss-sell rows (OYO ₹14,000 @ ₹28; DOGE $900→$0; Peloton $255→$0; BTC panic-trim ₹315; Apple trim $760; Tata Motors ₹46,500 @ ₹310 + ₹43,500 @ ₹290; Yes Bank ₹42,000 @ ₹14) with notes; type filter All Types shows the live mix on one page (INTEREST, EXPENSE, CONTRIBUTION, WITHDRAWAL, SALARY).
+- Expenses: 430 rows available; the category mix on the dashboard reflects the one-offs.
+- No exceptions / unique-constraint violations / rollback errors in the backend log after the snapshot force-regenerate (the flush-order bug was fixed as part of loading — see the Appendix C record already in the tracker for the snapshot upsert fix).
+
+**Not covered**: add/edit/delete flows were not exercised (out of scope for "see how it behaves" with seeded data); the dev data is additive only and the pre-seeded backup is retained. The snapshot force-regenerate crash that surfaced during verification is recorded in Appendix C (Real/Nominal growth disabled — currency-rate duplicate-key crash row already there; the snapshot upsert fix is a separate sub-record handled inline in SnapshotGenerationService + both repos).
+
+**Known caveats** (by design, not bugs):
+- Gold exposure is modelled as the listed GOLDBEES ETF (the app has no GOLD asset type and no commodity class), plus the RBI Sovereign Gold Bond (modelled as a BOND with 40 units × ₹5,076 face, 2.5% coupon — the cheapest way to give gold a bond-shaped income stream the app already understands).
+- Crypto is USD-custody (Coinbase/Binance) so the SELL rows show $ amounts; the app has no crypto-native P&L, so realised loss is just the SELL amount.
+- USD equity sells show $ price/amount in the UI (currency is per-transaction, which is correct); the app's stage-1 forex mock (83/90/105 to INR hardcoded) governs aggregate INR totals, not per-share FX at trade time.
+- The snapshot sub-record for the force-regenerate crash is intentionally kept in-line rather than a new Appendix C row, because the only symptom was on the verification of this very dataset; the root cause and fix (bulk JPQL delete, flush-order safe, two repos + service) are documented in the service/repository source comments and the existing Appendix C "Real/Nominal growth disabled" row already references the flush-order class of bug.
 
 ### Overview
 After completing Phase 6, extensive testing and bug fixing was performed to prepare the application for real-world usage. Multiple critical bugs were identified and resolved, and several user-requested features were added.

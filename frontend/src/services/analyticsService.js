@@ -16,6 +16,13 @@ export const analyticsService = {
     return response.data;
   },
 
+  // E13: real (inflation-adjusted) growth in today's rupees — always INR,
+  // independent of the dashboard currency selector.
+  async getRealGrowthMetrics(years = 5) {
+    const response = await api.get(`/portfolio/real-growth?years=${years}`);
+    return response.data;
+  },
+
   async getSegmentImpact(currency = 'INR') {
     const response = await api.get(`/portfolio/segment-impact?currency=${currency}`);
     return response.data;

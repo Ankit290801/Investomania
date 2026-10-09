@@ -18,6 +18,11 @@ import java.util.Map;
 public class ExpenseCoverageDTO {
 
     private BigDecimal totalExpenses;
+    /**
+     * Portion of {@link #totalExpenses} that the user mapped to investment
+     * assets via {@code ExpenseAssetMapping} (the declared coverage).
+     */
+    private BigDecimal totalCoveredExpenses;
     private BigDecimal totalIncome; // From investments (dividends, interest)
     private BigDecimal coveragePercentage;
     private Map<String, BigDecimal> categoryBreakdown; // Category -> Amount

@@ -27,7 +27,8 @@ const DashboardPage = () => {
     segmentImpact: null,
     recentTransactions: [],
     expenseCoverage: null,
-    categoryBreakdown: null
+    categoryBreakdown: null,
+    realGrowth: null
   });
 
   useEffect(() => {
@@ -54,6 +55,13 @@ const DashboardPage = () => {
         console.error('Growth error:', err);
         return { historicalData: [], yoyGrowth: 0, yoyGrowthPercentage: 0, cagr: 0, currency };
       });
+
+      // E13: real (inflation-adjusted) growth — INR-only, so not keyed on the
+      // currency selector; fetched alongside so the Nominal/Real toggle is instant.
+      const realGrowthPromise = analyticsService.getRealGrowthMetrics(5).catch(err => {
+        console.error('Real growth error:', err);
+        return null;
+      });
       
       const segmentImpactPromise = analyticsService.getSegmentImpact(currency).catch(err => {
         console.error('Segment Impact error:', err);
@@ -75,10 +83,11 @@ const DashboardPage = () => {
         return null;
       });
 
-      const [netWorth, segments, growth, segmentImpact, transactions, expenseCoverage, categoryBreakdown] = await Promise.all([
+      const [netWorth, segments, growth, realGrowth, segmentImpact, transactions, expenseCoverage, categoryBreakdown] = await Promise.all([
         netWorthPromise,
         segmentsPromise,
         growthPromise,
+        realGrowthPromise,
         segmentImpactPromise,
         transactionsPromise,
         expenseCoveragePromise,
@@ -89,6 +98,7 @@ const DashboardPage = () => {
         netWorth,
         segments,
         growth,
+        realGrowth,
         segmentImpact,
         recentTransactions: Array.isArray(transactions) ? transactions.slice(0, 5) : [],
         expenseCoverage,
@@ -169,7 +179,8 @@ const DashboardPage = () => {
           Portfolio Dashboard
         </Typography>
         
-        <Box display="flex" gap={2} alignItems="center">
+        {/* E8: tour anchor — header actions live in the site guide. */}
+        <Box display="flex" gap={2} alignItems="center" data-tour="dashboard-actions">
           <Button
             variant="outlined"
             startIcon={updating ? <CircularProgress size={16} /> : <SyncIcon />}
@@ -196,7 +207,8 @@ const DashboardPage = () => {
         </Box>
       </Box>
       
-      <Grid container spacing={3}>
+      {/* E8: tour anchor — whole card grid is spotlighted as the "portfolio at a glance" stop. */}
+      <Grid container spacing={3} data-tour="dashboard-cards">
         {/* Net Worth Card */}
         <Grid item xs={12} md={4}>
           <NetWorthCard
@@ -228,6 +240,7 @@ const DashboardPage = () => {
           <GrowthChartCard 
             data={data.growth?.historicalData || []}
             currency={currency}
+            realData={data.realGrowth}
           />
         </Grid>
 

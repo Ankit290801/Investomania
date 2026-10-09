@@ -33,10 +33,35 @@ import {
   Logout as LogoutIcon,
   History as HistoryIcon,
   DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon
+  LightMode as LightModeIcon,
+  Tour as TourIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useThemePreference } from '../../contexts/ThemeContext';
+
+// E8 — First-Time User Site Guide. SITE_TOUR_KEYS owns the per-user
+// localStorage flag; useSiteTour exposes startTour() for the auto-start
+// gate and the avatar-menu replay item.
+import { SITE_TOUR_KEYS, useSiteTour } from '../../contexts/SiteTourContext';
+
+/**
+ * E8 trigger — fires the tour exactly once per user: the tour runs on the
+ * first sign-in only when this is the user's very first session in this
+ * browser (nothing to resume in sessionStorage). Replays live in
+ * DashboardLayout's avatar-menu "Site tour" item.
+ */
+const shouldAutoStartTour = (user) => {
+  if (!user?.username) return false;
+  try {
+    if (window.localStorage.getItem(SITE_TOUR_KEYS.seenFor(user.username)) === 'true') return false;
+    if (window.sessionStorage.getItem(SITE_TOUR_KEYS.RUN_GATE)) return false; // this session already saw it
+    window.sessionStorage.setItem(SITE_TOUR_KEYS.RUN_GATE, '1');
+    window.localStorage.setItem(SITE_TOUR_KEYS.seenFor(user.username), 'true');
+    return true;
+  } catch {
+    return false; // storage disabled — never trap the user in a tour
+  }
+};
 import { BRAND_GRADIENT } from '../../config/theme';
 import { APP_NAME, APP_TAGLINE } from '../../config/branding';
 import AppFooter from '../common/AppFooter';
@@ -90,6 +115,8 @@ const DashboardLayout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { mode, setPreference } = useThemePreference();
+  // E8: tour trigger — startTour handles the /dashboard hop itself.
+  const { startTour } = useSiteTour();
 
   useEffect(() => {
     try {
@@ -98,6 +125,12 @@ const DashboardLayout = () => {
       /* non-fatal */
     }
   }, [desktopOpen]);
+
+  // E8: fire-and-forget auto-start on the first-ever sign-in (marked "seen"
+  // upfront so refreshes never re-trigger; finished/skipped is irrelevant).
+  useEffect(() => {
+    if (shouldAutoStartTour(user)) startTour();
+  }, [user?.username]);
 
   const handleDrawerToggle = () => {
     if (isMobile) {
@@ -218,12 +251,13 @@ const DashboardLayout = () => {
           })
         }}
       >
-        <Toolbar sx={{ gap: 1 }}>
+        <Toolbar sx={{ gap: 1 }} data-tour="tour-welcome">
           <IconButton
             color="inherit"
             aria-label="toggle navigation"
             edge="start"
             onClick={handleDrawerToggle}
+            data-tour="nav-sidebar"
             sx={{ mr: 0.5 }}
           >
             {isMobile || !desktopOpen ? <MenuIcon /> : <ChevronLeftIcon />}
@@ -278,6 +312,17 @@ const DashboardLayout = () => {
           </Typography>
         </Box>
         <Divider />
+        <MenuItem
+          onClick={() => {
+            handleMenuClose();
+            startTour(); // E8: replay the site guide from avatar menu
+          }}
+        >
+          <ListItemIcon>
+            <TourIcon fontSize="small" />
+          </ListItemIcon>
+          Site tour
+        </MenuItem>
         <MenuItem
           onClick={() => {
             handleMenuClose();

@@ -34,4 +34,15 @@ public interface AssetValuationRepository extends JpaRepository<AssetValuation, 
     List<AssetValuation> findByValuationDate(LocalDate valuationDate);
 
     void deleteByInvestmentIdAndValuationDate(Long investmentId, LocalDate valuationDate);
+
+    /**
+     * Bulk delete of one (investment, date) valuation — immediate JPQL
+     * execution, flush-order safe (same rationale as
+     * PortfolioSnapshotRepository.deleteByUserIdAndSnapshotDateBulk: a deferred
+     * entity delete followed by save() re-inserts before the DELETE executes
+     * and violates the unique constraint).
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM AssetValuation v WHERE v.investmentId = :investmentId AND v.valuationDate = :date")
+    int deleteByInvestmentIdAndValuationDateBulk(@Param("investmentId") Long investmentId, @Param("date") LocalDate date);
 }

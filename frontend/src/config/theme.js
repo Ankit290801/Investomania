@@ -34,6 +34,15 @@ export const CHART_COLORS = [
 /** Brand gradient used for the logo mark and accents. */
 export const BRAND_GRADIENT = 'linear-gradient(135deg, #0F766E 0%, #4F46E5 100%)';
 
+/**
+ * E8 — tour overlay backdrops, one per mode (rgba needed so page content
+ * reads through the spotlight). Consumed by SiteTourContext.
+ */
+export const TOUR_OVERLAY = {
+  light: 'rgba(15, 23, 42, 0.55)',
+  dark: 'rgba(2, 6, 23, 0.66)'
+};
+
 /** Consistent semantic colours for gains/losses across light and dark. */
 export const semantic = {
   positive: { light: '#15803D', dark: '#4ADE80' },

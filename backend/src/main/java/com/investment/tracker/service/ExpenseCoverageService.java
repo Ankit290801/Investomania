@@ -2,9 +2,11 @@ package com.investment.tracker.service;
 
 import com.investment.tracker.dto.ExpenseCoverageDTO;
 import com.investment.tracker.model.Expense;
+import com.investment.tracker.model.ExpenseAssetMapping;
 import com.investment.tracker.model.ExpenseCategory;
 import com.investment.tracker.model.Transaction;
 import com.investment.tracker.model.TransactionType;
+import com.investment.tracker.repository.ExpenseAssetMappingRepository;
 import com.investment.tracker.repository.ExpenseRepository;
 import com.investment.tracker.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class ExpenseCoverageService {
 
     private final ExpenseRepository expenseRepository;
     private final TransactionRepository transactionRepository;
+    private final ExpenseAssetMappingRepository mappingRepository;
     private final ForexService forexService;
 
     /** Convert a single amount to the target currency (null-safe). */
@@ -100,13 +103,40 @@ public class ExpenseCoverageService {
             .map(txn -> toTarget(txn.getAmount(), txn.getCurrency(), currency))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Calculate coverage percentage
+        // Declared coverage: an ExpenseAssetMapping states what share of an
+        // expense is covered by a mapped investment (e.g. rent 50% from FD
+        // interest + 50% from dividend income), so the mappings — not the
+        // income total — drive the coverage percentage. The mapping API
+        // already caps the sum per expense at 100%.
+        Map<Long, BigDecimal> mappedPercentByExpense = mappingRepository.findAllForUser(userId).stream()
+            .collect(Collectors.groupingBy(
+                ExpenseAssetMapping::getExpenseId,
+                Collectors.mapping(
+                    ExpenseAssetMapping::getPercentage,
+                    Collectors.reducing(BigDecimal.ZERO, BigDecimal::add)
+                )
+            ));
+
+        BigDecimal totalCoveredExpenses = expenses.stream()
+            .map(e -> {
+                BigDecimal mappedPercentage = mappedPercentByExpense.getOrDefault(e.getId(), BigDecimal.ZERO);
+                if (mappedPercentage.compareTo(BigDecimal.ZERO) <= 0) {
+                    return BigDecimal.ZERO;
+                }
+                BigDecimal share = mappedPercentage.min(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                return toTarget(e.getAmount(), e.getCurrency(), currency).multiply(share);
+            })
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Calculate coverage percentage from the mapped (declared) portion
         BigDecimal coveragePercentage = totalExpenses.compareTo(BigDecimal.ZERO) > 0
-            ? totalIncome.divide(totalExpenses, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+            ? totalCoveredExpenses.divide(totalExpenses, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
             : BigDecimal.ZERO;
 
         return ExpenseCoverageDTO.builder()
             .totalExpenses(totalExpenses)
+            .totalCoveredExpenses(totalCoveredExpenses)
             .totalIncome(totalIncome)
             .coveragePercentage(coveragePercentage)
             .categoryBreakdown(categoryTotals(expenses, currency))

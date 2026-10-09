@@ -3,6 +3,7 @@ package com.investment.tracker.controller;
 import com.investment.tracker.dto.*;
 import com.investment.tracker.util.SecurityUtil;
 import com.investment.tracker.service.PortfolioCalculationService;
+import com.investment.tracker.service.RealGrowthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class PortfolioController {
 
     private final PortfolioCalculationService portfolioCalculationService;
+    private final RealGrowthService realGrowthService;
     private final SecurityUtil securityUtil;
 
     /**
@@ -65,6 +67,23 @@ public class PortfolioController {
         
         GrowthMetricsDTO growth = portfolioCalculationService.calculateYoYGrowth(userId, years, currency);
         return ResponseEntity.ok(growth);
+    }
+
+    /**
+     * GET /api/portfolio/real-growth?years=5
+     * E13: inflation-adjusted growth in today's rupees (always INR) with a
+     * per-fiscal-year breakdown (nominal, real, Y-o-Y inflation, returns)
+     * and realized FY XIRR (nominal + CPI-deflated).
+     */
+    @GetMapping("/real-growth")
+    public ResponseEntity<RealGrowthMetricsDTO> getRealGrowth(
+            @RequestParam(defaultValue = "5") int years) {
+
+        Long userId = securityUtil.getCurrentUserId();
+        log.info("GET /api/portfolio/real-growth - User: {}, Years: {}", userId, years);
+
+        RealGrowthMetricsDTO realGrowth = realGrowthService.getRealGrowthMetrics(userId, years);
+        return ResponseEntity.ok(realGrowth);
     }
 
     /**

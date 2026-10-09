@@ -38,4 +38,15 @@ public interface PortfolioSnapshotRepository extends JpaRepository<PortfolioSnap
     @Modifying
     @Query("DELETE FROM PortfolioSnapshot s WHERE s.userId = :userId")
     void deleteAllForUser(@Param("userId") Long userId);
+
+    /**
+     * Bulk delete of one (user, date) snapshot — immediate JPQL execution,
+     * flush-order safe. generateSnapshotForDate used find+entity-delete+save
+     * for its upsert; Hibernate queues INSERTs before deferred DELETEs within
+     * a flush, so re-generating an existing date violated the
+     * (user_id, snapshot_date) unique index (observed live on force=true).
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM PortfolioSnapshot s WHERE s.userId = :userId AND s.snapshotDate = :date")
+    int deleteByUserIdAndSnapshotDateBulk(@Param("userId") Long userId, @Param("date") LocalDate date);
 }

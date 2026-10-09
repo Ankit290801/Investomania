@@ -6,8 +6,10 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +52,34 @@ public interface CurrencyRateRepository extends JpaRepository<CurrencyRate, Long
     @Query("SELECT cr FROM CurrencyRate cr WHERE cr.lastUpdated < :cutoffTime")
     List<CurrencyRate> findStaleRates(@Param("cutoffTime") LocalDateTime cutoffTime);
     
+    /**
+     * Idempotent upsert for H2 (and PostgreSQL via its INSERT ... ON CONFLICT).
+     * Insert a fresh rate for a (from_currency, to_currency) pair, or silently
+     * replace any stale/duplicate row so a concurrent or stale-refresh thread
+     * never hits the uk_currency_pair unique constraint. H2 2.x native MERGE:
+     *   MERGE INTO currency_rates (cols...) KEY (from_currency, to_currency) VALUES (...)
+     * The explicit column list is REQUIRED on H2: without it the VALUES clause
+     * must supply a value for every table column (including the generated id),
+     * otherwise H2 fails with error 21002 "Column count does not match".
+     * REQUIRES_NEW isolation: a failed upsert must never mark the caller's
+     * transaction rollback-only (an inner failure inside an outer @Transactional
+     * request silently poisons the whole transaction — observed as
+     * UnexpectedRollbackException on /real-growth when this query was wrong).
+     */
+    @Modifying(clearAutomatically = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Query(value =
+           "MERGE INTO currency_rates "
+           + "(from_currency, to_currency, rate, last_updated, source, created_at) "
+           + "KEY (from_currency, to_currency) "
+           + "VALUES (:fromCurrency, :toCurrency, :rate, :lastUpdated, :source, CURRENT_TIMESTAMP)",
+           nativeQuery = true)
+    void upsertRate(@Param("fromCurrency") String fromCurrency,
+                    @Param("toCurrency") String toCurrency,
+                    @Param("rate") BigDecimal rate,
+                    @Param("lastUpdated") LocalDateTime lastUpdated,
+                    @Param("source") String source);
+
     /**
      * Check if a valid rate exists for a currency pair
      */

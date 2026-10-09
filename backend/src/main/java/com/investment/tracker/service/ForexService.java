@@ -97,18 +97,17 @@ public class ForexService {
         
         try {
             BigDecimal rate = fetchExchangeRateFromApi(fromCurrency, toCurrency);
-            
-            // Store in cache
-            CurrencyRate currencyRate = new CurrencyRate();
-            currencyRate.setFromCurrency(fromCurrency);
-            currencyRate.setToCurrency(toCurrency);
-            currencyRate.setRate(rate);
-            currencyRate.setSource("EXCHANGERATE_API");
-            currencyRate.setLastUpdated(LocalDateTime.now());
-            currencyRateRepository.save(currencyRate);
-            
+
+            // Store in cache (idempotent H2 upsert — replaces on key collision, so a
+            // concurrent/stale-refresh thread can never hit the uk_currency_pair unique
+            // constraint and corrupt the caller — observed as 23505 under concurrent
+            // refresh threads on the 'ankit' session's dormant USD/EUR pairs).
+            currencyRateRepository.upsertRate(
+                    fromCurrency, toCurrency, rate,
+                    LocalDateTime.now(), "EXCHANGERATE_API");
+
             logger.info("Cached exchange rate: {} -> {} = {}", fromCurrency, toCurrency, rate);
-            
+
             return rate;
             
         } catch (Exception e) {

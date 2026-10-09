@@ -11,7 +11,8 @@ import { formatCurrency } from '../../utils/currencyFormatter';
 const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
   if (!coverage) return null;
 
-  const { totalExpenses, totalIncome, coveragePercentage } = coverage;
+  const { totalExpenses, totalCoveredExpenses, totalIncome, coveragePercentage } = coverage;
+  const coveredExpenses = totalCoveredExpenses ?? 0;
   const isCovered = coveragePercentage >= 100;
 
   return (
@@ -31,9 +32,9 @@ const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Investment Income
+              Covered by Mappings
             </Typography>
             <Typography
               variant="body2"
@@ -41,6 +42,15 @@ const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
               color="success.main"
               sx={{ fontVariantNumeric: 'tabular-nums' }}
             >
+              {formatCurrency(coveredExpenses, currency)}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Investment Income
+            </Typography>
+            <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
               {formatCurrency(totalIncome, currency)}
             </Typography>
           </Box>
@@ -84,8 +94,8 @@ const ExpenseCoverageCard = ({ coverage, currency = 'INR' }) => {
 
         <Typography variant="caption" color="text.secondary">
           {isCovered
-            ? 'Your investment income covers all expenses'
-            : 'Your investment income partially covers expenses'}
+            ? 'All expenses are covered by mapped investment assets'
+            : 'Coverage comes from expenses mapped to investment assets'}
         </Typography>
       </CardContent>
     </Card>

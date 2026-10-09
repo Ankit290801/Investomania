@@ -5,12 +5,14 @@ import { CssBaseline } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { PwaProvider } from './contexts/PwaContext';
 import PwaToasts from './components/common/PwaToasts';
+import { SiteTourProvider } from './contexts/SiteTourContext';
 import { ThemeProvider, useThemePreference } from './contexts/ThemeContext';
 import { buildAppTheme } from './config/theme';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
+import SettingsWithTourAnchors from './components/tour/SettingsWithTourAnchors';
 import DashboardPage from './pages/DashboardPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -29,7 +31,11 @@ const ThemedApp = () => {
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <PwaProvider>
+      {/* E8: app-wide tour host — the provider renders the Joyride engine
+          once, above the routes, so the tour survives Dashboard →
+          Investments → Expenses → Settings page changes mid-run. */}
+      <SiteTourProvider theme={theme}>
+        <PwaProvider>
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
@@ -49,7 +55,10 @@ const ThemedApp = () => {
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
             <Route path="/tax-reports" element={<TaxReportsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            {/* E8: renders SettingsPage untouched — the wrapper only stamps
+                data-tour attributes on the page's cards from outside
+                (SettingsPage.jsx is stakeholder-owned). */}
+            <Route path="/settings" element={<SettingsWithTourAnchors />} />
             <Route path="/snapshots" element={<SnapshotPage />} />
           </Route>
           
@@ -61,6 +70,7 @@ const ThemedApp = () => {
         </Routes>
       <PwaToasts />
       </PwaProvider>
+      </SiteTourProvider>
     </MuiThemeProvider>
   );
 }

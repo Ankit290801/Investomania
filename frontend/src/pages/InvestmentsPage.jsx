@@ -86,7 +86,8 @@ const InvestmentsHub = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      {/* E8: tour anchor — the hub header (asset-class summary + actions). */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }} data-tour="investments-header">
         <Box>
           <Typography variant="h4">Investments</Typography>
           <Typography variant="body2" color="text.secondary">

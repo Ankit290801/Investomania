@@ -7,7 +7,13 @@ import {
   Tooltip as MuiTooltip,
   ToggleButtonGroup,
   ToggleButton,
-  Divider
+  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -42,20 +48,40 @@ const RANGE_OPTIONS = [
   { value: 'ALL', label: 'ALL' }
 ];
 
+// E13: real view deflates the series into today's rupees via the bundled
+// All-India monthly CPI (always INR, independent of the currency selector).
+const VIEW_OPTIONS = [
+  { value: 'NOMINAL', label: 'Nominal' },
+  { value: 'REAL', label: 'Real' }
+];
+
+/** Signed percentage cell ("+12.50%" / "-3.10%" / "—"). */
+const formatSignedPct = (v) =>
+  v == null ? '—' : `${v > 0 ? '+' : ''}${Number(v).toFixed(2)}%`;
+
+const formatPct = (v) => (v == null ? '—' : `${Number(v).toFixed(2)}%`);
+
 /**
- * Portfolio growth card (backlog feature F4): area chart over the growth
- * series with a range selector (1Y/3Y/5Y/ALL), CAGR and max-drawdown stats,
- * and the snapshot-vs-estimated dot legend.
+ * Portfolio growth card (F4 + E13): area chart over the growth series with a
+ * range selector (1Y/3Y/5Y/ALL) and a Nominal/Real toggle, CAGR and
+ * max-drawdown stats, the snapshot-vs-estimated dot legend, and the E13
+ * per-fiscal-year table (nominal vs today's-rupee value, Y-o-Y inflation,
+ * real return, realized FY XIRR).
  */
-const GrowthChartCard = ({ data, currency = 'INR' }) => {
+const GrowthChartCard = ({ data, currency = 'INR', realData = null }) => {
   const [rangeYears, setRangeYears] = useState('ALL');
+  const [view, setView] = useState('NOMINAL');
   const theme = useTheme();
-  const seriesColor = theme.palette.primary.main;
+  const isReal = view === 'REAL';
+  const displayCurrency = isReal ? 'INR' : currency;
+  const seriesColor = isReal ? theme.palette.secondary.main : theme.palette.primary.main;
 
   const fullSeries = useMemo(() => buildGrowthSeries(data), [data]);
+  const realSeries = useMemo(() => buildGrowthSeries(realData?.realSeries || []), [realData]);
+  const activeFull = isReal ? realSeries : fullSeries;
   const series = useMemo(
-    () => filterGrowthSeries(fullSeries, rangeYears === 'ALL' ? null : rangeYears),
-    [fullSeries, rangeYears]
+    () => filterGrowthSeries(activeFull, rangeYears === 'ALL' ? null : rangeYears),
+    [activeFull, rangeYears]
   );
   const cagr = useMemo(() => computeCAGR(series), [series]);
   const drawdown = useMemo(() => computeMaxDrawdown(series), [series]);
@@ -81,6 +107,9 @@ const GrowthChartCard = ({ data, currency = 'INR' }) => {
   const windowChange =
     first && last && first.value > 0 ? ((last.value - first.value) / first.value) * 100 : null;
 
+  const fiscalYears = realData?.fiscalYears || [];
+  const inflation = realData?.inflation || null;
+
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
@@ -88,31 +117,51 @@ const GrowthChartCard = ({ data, currency = 'INR' }) => {
           <Typography variant="overline" component="div" sx={{ color: 'text.secondary' }}>
             Portfolio Growth
           </Typography>
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={rangeYears}
-            onChange={(_, v) => v !== null && setRangeYears(v)}
-          >
-            {RANGE_OPTIONS.map((opt) => (
-              <ToggleButton key={String(opt.value)} value={opt.value}>
-                {opt.label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={rangeYears}
+              onChange={(_, v) => v !== null && setRangeYears(v)}
+            >
+              {RANGE_OPTIONS.map((opt) => (
+                <ToggleButton key={String(opt.value)} value={opt.value}>
+                  {opt.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={view}
+              onChange={(_, v) => v !== null && setView(v)}
+            >
+              {VIEW_OPTIONS.map((opt) => (
+                <ToggleButton
+                  key={opt.value}
+                  value={opt.value}
+                  disabled={opt.value === 'REAL' && realSeries.length === 0}
+                >
+                  {opt.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
         </Box>
 
         {/* Headline stats */}
         <Box sx={{ display: 'flex', gap: 3, mb: 2, flexWrap: 'wrap' }}>
-          <Box>              <Typography variant="caption" color="text.secondary">Latest value</Typography>
+          <Box>              <Typography variant="caption" color="text.secondary">
+              Latest value{isReal ? ' (real, today’s ₹)' : ''}
+            </Typography>
             <Typography variant="h6" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              {formatCurrency(last?.value || 0, currency)}
+              {formatCurrency(last?.value || 0, displayCurrency)}
             </Typography>
           </Box>
           {windowChange != null && (
             <Box>
               <Typography variant="caption" color="text.secondary">
-                Change over window
+                Change over window{isReal ? ' (real)' : ''}
               </Typography>
               <Typography
                 variant="h6"
@@ -120,7 +169,7 @@ const GrowthChartCard = ({ data, currency = 'INR' }) => {
                 sx={{ color: semanticColor(theme, windowChange >= 0), fontVariantNumeric: 'tabular-nums' }}
               >
                 {windowChange >= 0 ? '+' : '-'}
-                {formatCurrency(Math.abs(last.value - first.value), currency)}{' '}
+                {formatCurrency(Math.abs(last.value - first.value), displayCurrency)}{' '}
                 ({windowChange >= 0 ? '+' : ''}
                 {windowChange.toFixed(1)}%)
               </Typography>
@@ -128,7 +177,9 @@ const GrowthChartCard = ({ data, currency = 'INR' }) => {
           )}
           {cagr != null && (
             <Box>
-              <Typography variant="caption" color="text.secondary">CAGR</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {isReal ? 'Real CAGR' : 'CAGR'}
+              </Typography>
               <Typography variant="h6" fontWeight={700}>
                 {(cagr * 100).toFixed(1)}%
               </Typography>
@@ -157,14 +208,14 @@ const GrowthChartCard = ({ data, currency = 'INR' }) => {
             <CartesianGrid {...chartGridProps(theme)} />
             <XAxis dataKey="label" {...chartAxisProps(theme)} />
             <YAxis tickFormatter={formatAxisValue} width={64} {...chartAxisProps(theme)} />
-            <Tooltip formatter={growthTooltipFormatter(currency)} {...chartTooltipStyle(theme)} />
+            <Tooltip formatter={growthTooltipFormatter(displayCurrency)} {...chartTooltipStyle(theme)} />
             <Area
               type="monotone"
               dataKey="value"
               stroke={seriesColor}
               strokeWidth={2}
               fill="url(#growthFill)"
-              name="Portfolio Value"
+              name={isReal ? 'Real value (today’s ₹)' : 'Portfolio Value'}
               dot={(props) => {
                 const { cx, cy, payload } = props;
                 if (!payload.isSnapshot && !hasSnapshotData) return <g key={`d-${cx}-${cy}`} />;
@@ -196,6 +247,71 @@ const GrowthChartCard = ({ data, currency = 'INR' }) => {
                 </Box>
               </MuiTooltip>
             </Box>
+          </>
+        )}
+
+        {fiscalYears.length > 0 && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="overline" component="div" sx={{ color: 'text.secondary', mb: 0.5 }}>
+              Real growth by fiscal year
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Fiscal year</TableCell>
+                    <TableCell align="right">Nominal</TableCell>
+                    <TableCell align="right">Real (today’s ₹)</TableCell>
+                    <TableCell align="right">Inflation (YoY)</TableCell>
+                    <TableCell align="right">Real return</TableCell>
+                    <TableCell align="right">FY XIRR (real)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {fiscalYears.map((fy) => (
+                    <TableRow key={fy.fyLabel}>
+                      <TableCell>{fy.fyLabel}</TableCell>
+                      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {formatCurrency(fy.nominalValue, 'INR')}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {formatCurrency(fy.realValue, 'INR')}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {formatPct(fy.inflationPct)}
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          fontVariantNumeric: 'tabular-nums',
+                          color: fy.realReturnPct == null ? 'text.secondary' : semanticColor(theme, fy.realReturnPct >= 0)
+                        }}
+                      >
+                        {formatSignedPct(fy.realReturnPct)}
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          fontVariantNumeric: 'tabular-nums',
+                          color: fy.xirrRealPct == null ? 'text.secondary' : semanticColor(theme, fy.xirrRealPct >= 0)
+                        }}
+                      >
+                        {formatSignedPct(fy.xirrRealPct)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              {inflation?.source || ''}
+              {inflation?.extrapolatesCurrentData && inflation?.tableEnd
+                ? ` · Months beyond ${inflation.tableEnd} assume ${
+                    inflation.assumedAnnualRatePct != null ? Number(inflation.assumedAnnualRatePct).toFixed(1) : '4.0'
+                  }%/yr (RBI target midpoint)`
+                : ''}
+            </Typography>
           </>
         )}
       </CardContent>

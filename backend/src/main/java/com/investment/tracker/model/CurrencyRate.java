@@ -14,8 +14,7 @@ import java.time.LocalDateTime;
  * Entity representing currency exchange rates
  * Cached for 24 hours to reduce API calls
  */
-@Entity
-@Table(name = "currency_rates",
+@Entity    @Table(name = "currency_rates",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_currency_pair", columnNames = {"from_currency", "to_currency"})
     },

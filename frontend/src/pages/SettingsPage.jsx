@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,6 +9,10 @@ import {
   Grid,
   Alert,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Divider,
   InputAdornment,
   IconButton,
@@ -16,7 +20,10 @@ import {
 } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import DownloadIcon from '@mui/icons-material/Download';
+import RestoreIcon from '@mui/icons-material/Restore';
 import { settingsService } from '../services/settingsService';
+import { backupService } from '../services/backupService';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { usePwa } from '../contexts/PwaContext';
 
@@ -57,6 +64,11 @@ const SettingsPage = () => {
   const [passwordError, setPasswordError] = useState(null);
   const [showPasswords, setShowPasswords] = useState(false);
 
+  // Task 8.4: backup/restore state
+  const fileInputRef = useRef(null);
+  const [pendingRestoreFile, setPendingRestoreFile] = useState(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -86,6 +98,46 @@ const SettingsPage = () => {
       cancelled = true;
     };
   }, []);
+
+  // ---- Task 8.4: backup / restore ----
+  const handleExportBackup = async () => {
+    setBackupBusy(true);
+    setSaveError(null);
+    try {
+      const filename = await backupService.exportBackup();
+      setToast(`Backup downloaded: ${filename}`);
+    } catch (err) {
+      setSaveError(err.response?.data?.error || err.message || 'Backup failed');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleRestoreFileChosen = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-selecting the same file after a cancel
+    if (file) setPendingRestoreFile(file);
+  };
+
+  const handleRestoreConfirmed = async () => {
+    if (!pendingRestoreFile) return;
+    setBackupBusy(true);
+    setSaveError(null);
+    try {
+      const result = await backupService.restoreBackup(pendingRestoreFile);
+      setToast(result.message || 'Backup restored');
+      // Every page's data changed underneath the app — a full reload is the
+      // only way to guarantee investments, expenses, transactions, dashboard
+      // and snapshots all refetch. Brief delay so the toast is readable.
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Restore failed';
+      setSaveError(msg);
+    } finally {
+      setBackupBusy(false);
+      setPendingRestoreFile(null);
+    }
+  };
 
   const handlePreferenceChange = (field, value) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
@@ -309,6 +361,51 @@ const SettingsPage = () => {
           </Paper>
         </Grid>
 
+        {/* Task 8.4: full-data backup & restore */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Backup & Restore
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Download a complete JSON backup of your portfolio (investments,
+              transactions, expenses, snapshots and preferences), or restore
+              your data from a previously exported backup file.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                startIcon={<DownloadIcon />}
+                onClick={handleExportBackup}
+                disabled={backupBusy}
+              >
+                Download Backup
+              </Button>
+              <Button
+                variant="outlined"
+                color="warning"
+                startIcon={<RestoreIcon />}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={backupBusy}
+              >
+                Restore from Backup…
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={handleRestoreFileChosen}
+              />
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Restoring replaces ALL your current portfolio data with the
+              backup's contents. This cannot be undone.
+            </Typography>
+          </Paper>
+        </Grid>
+
         {/* E9 P1: install surface — Chromium shows the custom prompt; iOS
             installs via Safari's "Add to Home Screen" (documented below). */}
         {canInstall && (
@@ -352,6 +449,34 @@ const SettingsPage = () => {
         onClose={() => setToast('')}
         message={toast}
       />
+
+      {/* Task 8.4: destructive-restore confirmation */}
+      <Dialog open={Boolean(pendingRestoreFile)} onClose={() => setPendingRestoreFile(null)}>
+        <DialogTitle>Restore backup?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            This will replace <strong>all</strong> your current investments,
+            transactions, expenses and snapshots with the contents of{' '}
+            <strong>{pendingRestoreFile?.name}</strong>.
+          </Typography>
+          <Typography variant="body2" color="warning.main" sx={{ mt: 2 }}>
+            Your current data will be permanently deleted. This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRestoreFile(null)} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRestoreConfirmed}
+            color="warning"
+            variant="contained"
+            disabled={backupBusy}
+          >
+            {backupBusy ? 'Restoring…' : 'Replace my data'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

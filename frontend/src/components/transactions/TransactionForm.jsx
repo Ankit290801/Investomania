@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -12,16 +12,61 @@ import {
   Typography
 } from '@mui/material';
 
-const schema = yup.object().shape({
-  type: yup.string().required('Transaction type is required'),
-  date: requiredDateString('Date'),
-  quantity: yup.number().positive('Quantity must be positive'),
-  price: yup.number().positive('Price must be positive'),
-  amount: yup.number().positive('Amount must be positive').required('Amount is required'),
-  notes: yup.string()
-});
+// Quantity/price only make sense for trade-shaped rows (BUY/SELL) on
+// investments that actually hold units. Every other type — bond interest,
+// dividends, contributions, withdrawals, ... — is an amount-only row.
+const TRADE_TYPES = ['BUY', 'SELL'];
+const UNIT_INVESTMENT_TYPES = ['EQUITY', 'CRYPTO', 'BOND'];
+
+// Yup casts an empty string to NaN for number fields, which turns an optional
+// field into an effective "must be a number" error. Normalise '' / null to
+// undefined so blank stays blank.
+const emptyToUndefined = (value, originalValue) =>
+  originalValue === '' || originalValue === null ? undefined : value;
+
+/**
+ * Unit trades must carry quantity and price: the backend's equity/crypto
+ * recalculation sums `txn.getQuantity()` for BUY/SELL without null guards,
+ * and the trade amount is derived from quantity × price. Every other
+ * transaction type keeps both fields optional (and hidden).
+ */
+const buildSchema = (unitTradesNeedQuantityPrice) =>
+  yup.object().shape({
+    type: yup.string().required('Transaction type is required'),
+    date: requiredDateString('Date'),
+    quantity: yup
+      .number()
+      .transform(emptyToUndefined)
+      .when('type', {
+        is: (type) => unitTradesNeedQuantityPrice && TRADE_TYPES.includes(type),
+        then: (field) => field.required('Quantity is required').positive('Quantity must be positive'),
+        otherwise: (field) => field.notRequired().positive('Quantity must be positive')
+      }),
+    price: yup
+      .number()
+      .transform(emptyToUndefined)
+      .when('type', {
+        is: (type) => unitTradesNeedQuantityPrice && TRADE_TYPES.includes(type),
+        then: (field) => field.required('Price is required').positive('Price must be positive'),
+        otherwise: (field) => field.notRequired().positive('Price must be positive')
+      }),
+    amount: yup
+      .number()
+      .transform(emptyToUndefined)
+      .typeError('Amount is required')
+      .required('Amount is required')
+      .positive('Amount must be positive'),
+    notes: yup.string()
+  });
 
 const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
+  const supportsQuantityPrice = UNIT_INVESTMENT_TYPES.includes(investmentType);
+
+  const schema = useMemo(
+    () => buildSchema(supportsQuantityPrice),
+    [supportsQuantityPrice]
+  );
+
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -34,16 +79,28 @@ const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
     }
   });
 
+  const transactionType = watch('type');
   const quantity = watch('quantity');
   const price = watch('price');
 
-  // Auto-calculate amount when quantity or price changes
+  const showQuantityPrice = supportsQuantityPrice && TRADE_TYPES.includes(transactionType);
+
+  // Auto-calculate the amount for unit trades only — never for amount-only rows.
   useEffect(() => {
-    if (quantity && price) {
+    if (showQuantityPrice && quantity && price) {
       const calculatedAmount = parseFloat(quantity) * parseFloat(price);
       setValue('amount', calculatedAmount.toFixed(2));
     }
-  }, [quantity, price, setValue]);
+  }, [showQuantityPrice, quantity, price, setValue]);
+
+  // Never carry a stale quantity/price across a type change into a row that
+  // doesn't show them (e.g. BOND BUY → INTEREST).
+  useEffect(() => {
+    if (!showQuantityPrice) {
+      setValue('quantity', '');
+      setValue('price', '');
+    }
+  }, [showQuantityPrice, setValue]);
 
   const getTransactionTypes = () => {
     const baseTypes = ['BUY', 'SELL'];
@@ -64,8 +121,6 @@ const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
     
     return baseTypes;
   };
-
-  const showQuantityPrice = ['EQUITY', 'CRYPTO', 'BOND'].includes(investmentType);
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)}>
@@ -162,7 +217,7 @@ const TransactionForm = ({ onSubmit, onCancel, investmentType }) => {
                 error={!!errors.amount}
                 helperText={errors.amount?.message || (showQuantityPrice ? 'Auto-calculated from quantity × price' : '')}
                 InputProps={{
-                  readOnly: showQuantityPrice && quantity && price
+                  readOnly: Boolean(showQuantityPrice && quantity && price)
                 }}
               />
             )}
